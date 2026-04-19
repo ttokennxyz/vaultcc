@@ -1,3 +1,7 @@
+if getgenv().key ~= "vault" then -- i know this is in plain text and easy asf to bypass, its just to get more people in the server <3
+  game.Players.LocalPlayer:Kick("please join the discord at https://discord.gg/Z7tvDkBUxX for the key")
+end
+
 local repo = "https://raw.githubusercontent.com/ttokennxyz/vaultcc/refs/heads/main/"
 local function load(filename)
   loadstring(game:HttpGet(repo .. filename .. ".lua"))()
