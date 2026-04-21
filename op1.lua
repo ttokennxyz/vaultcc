@@ -1216,7 +1216,6 @@ run_on_actor(getactors()[1], [[
     				Visibility(false)
     			end
     		end
-    		end
     	}
         end)()
 
@@ -1543,7 +1542,6 @@ run_on_actor(getactors()[1], [[
     					for _, Value in next, SkeletonEntry do setrenderproperty(Value, "Visible", false) end
     				end
     			end)
-    		end
     		end
     	}
         end)()
