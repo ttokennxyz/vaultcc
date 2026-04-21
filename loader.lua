@@ -8,4 +8,6 @@ local function load(filename)
 end
 if game.PlaceId == 87444640442831 or game.PlaceId == 121583187398542 then
   load("untitledshooter2")
+elseif game.PlaceId == 72920620366355 then
+  load("op1")
 end
