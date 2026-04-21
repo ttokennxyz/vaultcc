@@ -1,5 +1,7 @@
 run_on_actor(getactors()[1], [[
     local ESP = nil
+    local playerToViewmodel = {}
+    local GetTarget
     do
         --// Luraph Macros
 
@@ -518,9 +520,9 @@ run_on_actor(getactors()[1], [[
     			local IsAPlayer, Part = IsA(Object, "Player")
 
     			if IsAPlayer then
-    				Part = __index(Object, "Character")
-    				if Part then
-    					Part = (__index(Part, "PrimaryPart") or FindFirstChild(Part, "HumanoidRootPart"))
+    				local vm = playerToViewmodel[Object]
+    				if vm then
+    					Part = (__index(vm, "PrimaryPart") or FindFirstChild(vm, "torso") or FindFirstChild(vm, "head"))
     				end
     			else
     				if IsA(Object, "Model") then
@@ -797,6 +799,11 @@ run_on_actor(getactors()[1], [[
     			local Primary = Character and (__index(Character, "PrimaryPart") or FindFirstChild(Character, "HumanoidRootPart"))
 
     			Primary = Primary or not IsAPlayer and Object
+
+    			if not Primary and IsAPlayer then
+    				local _vm = playerToViewmodel[Object]
+    				Primary = _vm and (FindFirstChild(_vm, "torso") or FindFirstChild(_vm, "head"))
+    			end
 
     			local Type, Fill = Settings.Type, Settings.FillSquare
 
@@ -1640,27 +1647,26 @@ run_on_actor(getactors()[1], [[
     					return
     				end
 
-    				local Character = __index(Player, "Character")
-    				local Humanoid = Character and FindFirstChildOfClass(Character, "Humanoid")
-    				local Head = Character and (FindFirstChild(Character, "Head") or FindFirstChild(Character, "HumanoidRootPart"))
+    				local vm = playerToViewmodel[Player]
+    				local vmPart = vm and (FindFirstChild(vm, "torso") or FindFirstChild(vm, "head"))
 
     				local IsInDistance
 
-    				if Character and IsDescendantOf(Character, Workspace) and Humanoid and Head then
-    					local TeamCheckOption = DeveloperSettings.TeamCheckOption
-
+    				if vm and vmPart then
     					Checks.Alive = true
     					Checks.Team = true
 
     					if Settings.AliveCheck then
-    						Checks.Alive = __index(Humanoid, "Health") > 0
+    						local _char = __index(Player, "Character")
+    						local _hum = _char and FindFirstChildOfClass(_char, "Humanoid")
+    						Checks.Alive = not _hum or __index(_hum, "Health") > 0
     					end
 
     					if Settings.TeamCheck then
     						Checks.Team = Player:GetAttribute("Team") ~= LocalPlayer:GetAttribute("Team")
     					end
 
-    					IsInDistance = (__index(Head, "Position") - CoreFunctions.GetLocalCharacterPosition()).Magnitude <= RenderDistance
+    					IsInDistance = (__index(vmPart, "Position") - CoreFunctions.GetLocalCharacterPosition()).Magnitude <= RenderDistance
     				else
     					Checks.Alive = false
     					Checks.Team = false
@@ -1862,9 +1868,14 @@ run_on_actor(getactors()[1], [[
     			if now - lastStateObjectSync < 3 then return end
     			lastStateObjectSync = now
 
+    			local newViewmodelMap = {}
+
     			for _, character in StateObject.get_all("Character") do
     				local Player = character.owner and character.owner:get()
     				if not Player or Player == LocalPlayer then continue end
+
+    				local vm = character.values and character.values.viewmodels
+    				if vm then newViewmodelMap[Player] = vm end
 
     				local alreadyWrapped = false
     				for _, v in next, Environment.UtilityAssets.WrappedObjects do
@@ -1878,13 +1889,34 @@ run_on_actor(getactors()[1], [[
     					UtilityFunctions:WrapObject(Player)
     				end
     			end
+
+    			playerToViewmodel = newViewmodelMap
+    			local _count = 0; for _ in pairs(newViewmodelMap) do _count += 1 end
+    			--print("[ESP sync] playerToViewmodel refreshed, entries: " .. tostring(_count))
+    			for player, vm in pairs(newViewmodelMap) do
+    				--print("  [" .. tostring(player.Name) .. "] vm=" .. tostring(vm) .. " class=" .. tostring(typeof(vm)) .. " parent=" .. tostring(vm and vm.Parent))
+    				if typeof(vm) == "Instance" then
+    					for _, child in ipairs(vm:GetChildren()) do
+    						--print("    child: " .. child.Name .. " [" .. child.ClassName .. "]")
+    					end
+    				end
+    			end
     		end)
 
     		--// Wrap all players that currently have an active character via StateObject
 
+    		--print("[ESP init] initial StateObject character scan:")
     		for _, character in StateObject.get_all("Character") do
     			local Player = character.owner and character.owner:get()
     			if Player and Player ~= LocalPlayer then
+    				local vm = character.values and character.values.viewmodels
+    				--print("  player=" .. tostring(Player and Player.Name) .. " vm=" .. tostring(vm) .. " class=" .. tostring(typeof(vm)) .. " parent=" .. tostring(vm and vm.Parent))
+    				if vm and typeof(vm) == "Instance" then
+    					for _, child in ipairs(vm:GetChildren()) do
+    						--print("    child: " .. child.Name .. " [" .. child.ClassName .. "]")
+    					end
+    				end
+    				if vm then playerToViewmodel[Player] = vm end
     				UtilityFunctions:WrapObject(Player)
     			end
     		end
@@ -6275,7 +6307,50 @@ run_on_actor(getactors()[1], [[
         RecoilUp = 0.3,
         RecoilSide = 0,
         Spread = 0,
+        HitPart = "torso",
     }
+
+    local function cfr(from, to)
+        return CFrame.lookAt(from, to)
+    end
+
+    GetTarget = function()
+        local cam = game:GetService("Workspace").CurrentCamera
+        local viewport = cam.ViewportSize
+        local center = Vector2.new(viewport.X / 2, viewport.Y / 2)
+        local useFov = settings.SilentFovCircle
+        local fovRadius = settings.SilentFov
+
+        local _vmType = type(playerToViewmodel)
+        --print("[GetTarget] vmcount =", #playerToViewmodel)
+        local _vmCount = 0
+        if _vmType == "table" then for _ in next, playerToViewmodel do _vmCount += 1 end end
+        --print("[GetTarget] playerToViewmodel type=" .. _vmType .. " count=" .. _vmCount .. " SilentEnabled=" .. tostring(settings.SilentEnabled) .. " useFov=" .. tostring(settings.SilentFovCircle) .. " fov=" .. tostring(settings.SilentFov))
+
+        local bestDist = math.huge
+        local bestPart = nil
+
+        for player, vm in next, playerToViewmodel or {} do
+            if player == LocalPlayer then continue end
+
+            local hitpart = vm:FindFirstChild(settings.HitPart) or vm:FindFirstChild("torso")
+            if not hitpart then continue end
+
+            local screenPos, onScreen = cam:WorldToViewportPoint(hitpart.Position)
+            if not onScreen then continue end
+
+            local distFromCenter = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+            if useFov and distFromCenter > fovRadius then continue end
+
+            if distFromCenter < bestDist then
+                bestDist = distFromCenter
+                bestPart = hitpart
+            end
+        end
+
+        --print("[GetTarget] result=" .. tostring(bestPart) .. " bestDist=" .. (bestDist == math.huge and "inf" or tostring(bestDist)))
+        return bestPart
+    end
 
     local DS = { -- drone settings
         Enabled = true,
@@ -6403,6 +6478,28 @@ run_on_actor(getactors()[1], [[
         end
     end)
 
+    local rs                    = cloneref(game:GetService('ReplicatedStorage'))
+    local gun_handler           = require(rs.Modules.Items.Item.Gun)
+
+    local old_shoot_look; old_shoot_look = hookfunction(gun_handler.get_shoot_look, newlclosure(function(shoot_cframe)
+        local result = old_shoot_look(shoot_cframe)
+
+        --print("[hook] get_shoot_look fired, result type=" .. typeof(result))
+
+        if (typeof(result) ~= 'CFrame') then return result end
+
+        local target = GetTarget()
+
+        --print("[hook] target=" .. tostring(target) .. " SilentEnabled=" .. tostring(settings.SilentEnabled))
+
+        if (settings.SilentEnabled and target) then
+            --print("[hook] redirecting shot to " .. tostring(target.Name) .. " @ " .. tostring(target.Position))
+            return cfr(result.p, target.position)
+        end
+
+        return result
+    end))
+
     local Window = Library:CreateWindow({
         Title = 'vault.cc | Operation One',
         Center = true,
@@ -6420,6 +6517,7 @@ run_on_actor(getactors()[1], [[
 
     local SilentGroup = Tabs.Main:AddLeftGroupbox('Silent Aim Settings')
     SilentGroup:AddToggle('SilentEnabled', { Text = 'Enabled', Default = settings.SilentEnabled })
+    SilentGroup:AddDropdown('HitPartDropdown', { Text = 'Hit Part', Values = {'torso', 'head'}, Default = 'torso', Callback = function(v) settings.HitPart = v end })
     SilentGroup:AddToggle('FovCircleEnabled', { Text = 'FOV Circle', Default = settings.SilentFovCircle })
     SilentGroup:AddLabel('Color'):AddColorPicker('SilentFovColor', { Text = 'Color', Default = settings.SilentFovCircleColor, Callback = function(v) settings.SilentFovCircleColor = v end })
     SilentGroup:AddSlider('FovSize', { -- 0-1
