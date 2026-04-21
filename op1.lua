@@ -418,29 +418,28 @@ run_on_actor(getactors()[1], [[
     			Outline = true
     		},
 
-    		Chams = {
-    			Enabled = false,
-    			RainbowColor = false,
-
-    			Color = Color3fromRGB(255, 255, 255),
-    			Transparency = 0.2,
-    			Thickness = 1,
-    			Filled = false
-    		},
-
-    		Highlight = {
-    			Enabled = false,
+    		HeadDot = {
+    			Enabled = true,
     			RainbowColor = false,
     			RainbowOutlineColor = false,
 
-    			DepthMode = Enum.HighlightDepthMode.AlwaysOnTop, -- AlwaysOnTop (0) / Occluded (1)
-    			FillColor = Color3fromRGB(255, 255, 255),
-    			FillTransparency = 0.5,
-    			HealthColor = false, -- Only works for Players / NPCs (Requires a Humanoid); Overrides "RainbowColor" property
-    			HealthColorBlue = 100,
+    			Color = Color3fromRGB(255, 255, 255),
+    			Transparency = 1,
+    			Thickness = 1,
+    			NumSides = 30,
+    			Filled = false,
 
-    			OutlineTransparency = 1,
-    			OutlineColor = Color3fromRGB(255, 255, 255)
+    			OutlineColor = Color3fromRGB(0, 0, 0),
+    			Outline = true
+    		},
+
+    		Skeleton = {
+    			Enabled = false,
+    			RainbowColor = false,
+
+    			Transparency = 1,
+    			Thickness = 1,
+    			Color = Color3fromRGB(255, 255, 255)
     		},
 
     	},
@@ -1074,105 +1073,149 @@ run_on_actor(getactors()[1], [[
     			end
     		end,
 
-    		Chams = function(Entry, Part, Cham)
-    			local Settings = Environment.Properties.Chams
+    		HeadDot = function(Entry, CircleObject, CircleOutlineObject)
+    			local Settings = Environment.Properties.HeadDot
 
-    			if not (Part and Cham and Entry) then
+    			local Head
+    			if Entry.IsAPlayer then
+    				local vm = playerToViewmodel[Entry.Object]
+    				Head = vm and FindFirstChild(vm, "head")
+    			else
+    				local Character = __index(Entry.Object, "Parent")
+    				Head = Character and FindFirstChild(Character, "Head")
+    			end
+
+    			if not Head then
+    				setrenderproperty(CircleObject, "Visible", false)
+    				setrenderproperty(CircleOutlineObject, "Visible", false)
     				return
     			end
 
-    			local ChamsEnabled, ESPEnabled = Settings.Enabled, Environment.Settings.Enabled
-    			local IsReady = Entry.Checks.Ready
+    			local HeadCFrame, HeadSize = __index(Head, "CFrame"), __index(Head, "Size")
+    			local Vector, OnScreen = WorldToViewportPoint(HeadCFrame.Position)
+    			local Top, Bottom = WorldToViewportPoint((HeadCFrame * CFramenew(0, HeadSize.Y / 2, 0)).Position), WorldToViewportPoint((HeadCFrame * CFramenew(0, -HeadSize.Y / 2, 0)).Position)
 
-    			local ConvertVector = CoreFunctions.ConvertVector
+    			setrenderproperty(CircleObject, "Visible", OnScreen)
+    			setrenderproperty(CircleOutlineObject, "Visible", OnScreen and Settings.Outline)
 
-    			local _CFrame, PartSize = select(2, pcall(function()
-    				return __index(Part, "CFrame"), __index(Part, "Size") / 2
-    			end))
-
-    			if not (ChamsEnabled and ESPEnabled and IsReady and _CFrame and PartSize and select(2, WorldToViewportPoint(_CFrame.Position))) then
-    				for Index = 1, 6 do
-    					_set(Cham["Quad"..Index], "Visible", false)
+    			if OnScreen then
+    				for Index, Value in next, Settings do
+    					if ValidProperties[Index] then
+    						setrenderproperty(CircleObject, Index, Value)
+    						if Settings.Outline then
+    							setrenderproperty(CircleOutlineObject, Index, Value)
+    						end
+    					end
     				end
 
-    				return
-    			end
+    				setrenderproperty(CircleObject, "Color", CoreFunctions.GetColor(Entry.Object, Settings.RainbowColor and Rainbow or Settings.Color))
 
-    			local Quads = {
-    				Quad1Object = Cham.Quad1,
-    				Quad2Object = Cham.Quad2,
-    				Quad3Object = Cham.Quad3,
-    				Quad4Object = Cham.Quad4,
-    				Quad5Object = Cham.Quad5,
-    				Quad6Object = Cham.Quad6
-    			}
-
-    			for Index, Value in next, Settings do
-    				if Index == "Enabled" then
-    					Index, Value = "Visible", ChamsEnabled and ESPEnabled and IsReady
-    				elseif Index == "Color" then
-    					Value = CoreFunctions.GetColor(Entry.Object, Settings.RainbowColor and Rainbow or Settings.Color)
+    				if Entry.PositionChanged then
+    					setrenderproperty(CircleObject, "Position", CoreFunctions.ConvertVector(Vector))
+    					setrenderproperty(CircleObject, "Radius", mathabs((Top - Bottom).Y) - 3)
     				end
 
-    				if not pcall(_get, Quads.Quad1Object, Index) then
-    					continue
-    				end
-
-    				for _, RenderObject in next, Quads do
-    					_set(RenderObject, Index, Value)
-    				end
-    			end
-
-    			if not Entry.PositionChanged then
-    				return
-    			end
-
-    			local Indexes, Positions = {1, 3, 4, 2}, CoreFunctions.Calculate3DQuad(_CFrame, PartSize)
-
-    			for Index = 1, 6 do
-    				local RenderObject = Quads["Quad"..Index.."Object"]
-
-    				for _Index = 1, 4 do
-                        local tmp = Indexes[_Index]
-    					_set(RenderObject, "Point"..stringchar(_Index + 64), ConvertVector(Positions[Index][tmp]))
+    				if Settings.Outline then
+    					setrenderproperty(CircleOutlineObject, "Color", Settings.RainbowOutlineColor and Rainbow or Settings.OutlineColor)
+    					setrenderproperty(CircleOutlineObject, "Thickness", Settings.Thickness + 1)
+    					setrenderproperty(CircleOutlineObject, "Transparency", Settings.Transparency)
+    					if not Entry.PositionChanged then return end
+    					setrenderproperty(CircleOutlineObject, "Position", getrenderproperty(CircleObject, "Position"))
+    					setrenderproperty(CircleOutlineObject, "Radius", getrenderproperty(CircleObject, "Radius"))
     				end
     			end
     		end,
 
-    		Highlight = function(Entry, Highlight)
-    			local Settings = Environment.Properties.Highlight
+    		Skeleton = function(Entry)
+    			local Settings = Environment.Properties.Skeleton
+    			local DeveloperSettings = Environment.DeveloperSettings
 
-    			if not (Entry.IsAPlayer and __index(Entry.Object, "Character") or __index(Entry.Object, "Parent")) then
-    				return __newindex(Highlight, "Enabled", false)
+    			local Head, Torso
+    			local RigType = Entry.RigType
+
+    			if Entry.IsAPlayer then
+    				local vm = playerToViewmodel[Entry.Object]
+    				if vm then
+    					Head = FindFirstChild(vm, "head")
+    					Torso = FindFirstChild(vm, "torso")
+    				end
+    			else
+    				local Character = __index(Entry.Object, "Parent")
+    				Head = Character and FindFirstChild(Character, "Head")
+    				Torso = Character and (FindFirstChild(Character, "HumanoidRootPart") or FindFirstChild(Character, "Torso"))
     			end
 
-    			__newindex(Highlight, "Enabled", select(3, CoreFunctions.CalculateParameters(Entry)))
+    			local Limbs = {}
+    			for Index, Value in next, Entry.Visuals.Skeleton do
+    				Limbs[Index] = Value
+    			end
 
-    			if __index(Highlight, "Enabled") then
-    				for Index, Value in next, Settings do
-    					if stringfind(Index, "Color") or stringfind(Index, "Enabled") then
-    						continue
-    					elseif stringfind(Index, "Transparency") then
-    						Value = 1 - Value -- Drawing libraries' and ROBLOX Instances' "Transparency" properties work differently.
+    			local Visibility = function(Value)
+    				for _, _Value in next, Limbs do
+    					setrenderproperty(_Value, "Visible", Value)
+    				end
+    			end
+
+    			if not Head or not Torso then return Visibility(false) end
+
+    			if DeveloperSettings.Throttle then
+    				Entry._Frame = (Entry._Frame or 0) + 1
+    				if Entry._Frame % mathclamp(DeveloperSettings.ThrottleStep, 2, 4) ~= 0 then return end
+    			end
+
+    			if select(3, CoreFunctions.CalculateParameters(Entry)) then
+    				for _, RenderObject in next, Limbs do
+    					setrenderproperty(RenderObject, "Visible", true)
+    					for _Index, _Value in next, Settings do
+    						if ValidProperties[_Index] then
+    							setrenderproperty(RenderObject, _Index, _Value)
+    						end
     					end
-
-    					if not pcall(__index, Highlight, Index) then
-    						continue
-    					end
-
-    					__newindex(Highlight, Index, Value)
+    					setrenderproperty(RenderObject, "Color", CoreFunctions.GetColor(Entry.Object, Settings.RainbowColor and Rainbow or Settings.Color))
     				end
 
-    				local Humanoid = Entry.Humanoid
+    				if not Entry.PositionChanged then return end
 
-    				if Settings.HealthColor and Humanoid then
-    					Highlight.FillColor = CoreFunctions.GetColorFromHealth(__index(Humanoid, "Health"), __index(Humanoid, "MaxHealth"), Settings.HealthColorBlue)
+    				local ConvertVector = CoreFunctions.ConvertVector
+    				local Head_P  = ConvertVector(WorldToViewportPoint(__index(Head,  "Position")))
+    				local Torso_P = ConvertVector(WorldToViewportPoint(__index(Torso, "Position")))
+
+    				if RigType == "Viewmodel" then
+    					local vm = playerToViewmodel[Entry.Object]
+    					if not vm then return Visibility(false) end
+    					local function vp(name) local p = FindFirstChild(vm, name); return p and ConvertVector(WorldToViewportPoint(__index(p, "Position"))) end
+    					local S1 = vp("shoulder1"); local S2 = vp("shoulder2")
+    					local A1 = vp("arm1");      local A2 = vp("arm2")
+    					local H1 = vp("hip1");      local H2 = vp("hip2")
+    					local L1 = vp("leg1");      local L2 = vp("leg2")
+    					setrenderproperty(Limbs.Spine, "From", Head_P);  setrenderproperty(Limbs.Spine, "To", Torso_P)
+    					if S1 and A1 then setrenderproperty(Limbs.LeftArm_Upper,  "From", Torso_P); setrenderproperty(Limbs.LeftArm_Upper,  "To", S1); setrenderproperty(Limbs.LeftArm_Lower,  "From", S1); setrenderproperty(Limbs.LeftArm_Lower,  "To", A1) end
+    					if S2 and A2 then setrenderproperty(Limbs.RightArm_Upper, "From", Torso_P); setrenderproperty(Limbs.RightArm_Upper, "To", S2); setrenderproperty(Limbs.RightArm_Lower, "From", S2); setrenderproperty(Limbs.RightArm_Lower, "To", A2) end
+    					if H1 and L1 then setrenderproperty(Limbs.LeftLeg_Upper,  "From", Torso_P); setrenderproperty(Limbs.LeftLeg_Upper,  "To", H1); setrenderproperty(Limbs.LeftLeg_Lower,  "From", H1); setrenderproperty(Limbs.LeftLeg_Lower,  "To", L1) end
+    					if H2 and L2 then setrenderproperty(Limbs.RightLeg_Upper, "From", Torso_P); setrenderproperty(Limbs.RightLeg_Upper, "To", H2); setrenderproperty(Limbs.RightLeg_Lower, "From", H2); setrenderproperty(Limbs.RightLeg_Lower, "To", L2) end
+    				elseif RigType == "R6" then
+    					local Character = __index(Entry.Object, "Character") or __index(Entry.Object, "Parent")
+    					local HeightModifier = DeveloperSettings.SkeletonR6HeightModifier
+    					local function bp(name) local p = FindFirstChild(Character, name); return p end
+    					local Torso_  = bp("Torso"); local LA = bp("Left Arm"); local RA = bp("Right Arm"); local LL = bp("Left Leg"); local RL = bp("Right Leg")
+    					if not (Torso_ and LA and RA and LL and RL) then return Visibility(false) end
+    					local function limb(p, h) local cf = __index(p,"CFrame"); local s = __index(p,"Size").Y/2-h; return ConvertVector(WorldToViewportPoint((cf*CFramenew(0,s,0)).Position)), ConvertVector(WorldToViewportPoint((cf*CFramenew(0,-s,0)).Position)) end
+    					local Ts, Te = limb(Torso_, HeightModifier+0.15)
+    					local LAs, LAe = limb(LA, HeightModifier); local RAs, RAe = limb(RA, HeightModifier)
+    					local LLs, LLe = limb(LL, HeightModifier); local RLs, RLe = limb(RL, HeightModifier)
+    					setrenderproperty(Limbs.Spine_Start,"From",Head_P);  setrenderproperty(Limbs.Spine_Start,"To",Ts)
+    					setrenderproperty(Limbs.Spine_End,  "From",Ts);      setrenderproperty(Limbs.Spine_End,  "To",Te)
+    					setrenderproperty(Limbs.LeftArm_Start, "From",LAs);  setrenderproperty(Limbs.LeftArm_Start, "To",LAe); setrenderproperty(Limbs.LeftArm_End,"From",Ts); setrenderproperty(Limbs.LeftArm_End,"To",LAs)
+    					setrenderproperty(Limbs.RightArm_Start,"From",RAs);  setrenderproperty(Limbs.RightArm_Start,"To",RAe); setrenderproperty(Limbs.RightArm_End,"From",Ts); setrenderproperty(Limbs.RightArm_End,"To",RAs)
+    					setrenderproperty(Limbs.LeftLeg_Start, "From",LLs);  setrenderproperty(Limbs.LeftLeg_Start, "To",LLe); setrenderproperty(Limbs.LeftLeg_End,"From",Te); setrenderproperty(Limbs.LeftLeg_End,"To",LLs)
+    					setrenderproperty(Limbs.RightLeg_Start,"From",RLs);  setrenderproperty(Limbs.RightLeg_Start,"To",RLe); setrenderproperty(Limbs.RightLeg_End,"From",Te); setrenderproperty(Limbs.RightLeg_End,"To",RLs)
     				else
-    					Highlight.FillColor = CoreFunctions.GetColor(Entry.Object, Settings.RainbowColor and Rainbow or Settings.FillColor)
+    					Visibility(false)
     				end
-
-    				Highlight.OutlineColor = CoreFunctions.GetColor(Entry.Object, Settings.RainbowOutlineColor and Rainbow or Settings.OutlineColor)
+    			else
+    				Visibility(false)
     			end
+    		end
     		end
     	}
         end)()
@@ -1415,160 +1458,92 @@ run_on_actor(getactors()[1], [[
     			end)
     		end,
 
-    		Chams = function(Entry)
+    		HeadDot = function(Entry)
     			local Allowed = Entry.Allowed
 
-    			if type(Allowed) == "table" and type(Allowed.Chams) == "boolean" and not Allowed.Chams then
+    			if type(Allowed) == "table" and type(Allowed.HeadDot) == "boolean" and not Allowed.HeadDot then
     				return
     			end
 
-    			local Object = Entry.Object
-    			local RigType = Entry.RigType
-    			local IsAPlayer = Entry.IsAPlayer
+    			local Settings = Environment.Properties.HeadDot
 
-    			local ChamsEntry = {}
+    			local CircleOutline = Drawingnew("Circle")
+    			local CircleOutlineObject = CircleOutline
+    			local Circle = Drawingnew("Circle")
+    			local CircleObject = Circle
 
-    			local PlayerCharacter = IsAPlayer and __index(Object, "Character")
+    			Entry.Visuals.HeadDot[1] = Circle
+    			Entry.Visuals.HeadDot[2] = CircleOutline
 
-    			local Settings = Environment.Properties.Chams
-
-    			local UnconfirmedRigType = RigType == "N/A"
-
-    			if UnconfirmedRigType and PlayerCharacter then
-    				RigType = (FindFirstChild(PlayerCharacter, "UpperTorso") or WaitForChild(PlayerCharacter, "LowerTorso", Inf)) and "R15" or FindFirstChild(PlayerCharacter, "Torso") and "R6" or "N/A"
-    			end
-
-    			if RigType == "N/A" then
-    				ChamsEntry[__index(Object, "Name")] = {}
-    			else
-    				ChamsEntry = RigType == "R15" and {
-    					Head = {},
-    					UpperTorso = {}, LowerTorso = {},
-    					LeftLowerArm = {}, LeftUpperArm = {}, LeftHand = {},
-    					RightLowerArm = {}, RightUpperArm = {}, RightHand = {},
-    					LeftLowerLeg = {}, LeftUpperLeg = {}, LeftFoot = {},
-    					RightLowerLeg = {}, RightUpperLeg = {}, RightFoot = {}
-    				} or RigType == "R6" and {
-    					Head = {},
-    					Torso = {},
-    					["Left Arm"] = {},
-    					["Right Arm"] = {},
-    					["Left Leg"] = {},
-    					["Right Leg"] = {}
-    				}
-    			end
-
-    			Entry.Visuals.Chams = ChamsEntry
-
-    			local ChamsEntryObjects = {}
-
-    			for _Index, Value in next, ChamsEntry do
-    				ChamsEntryObjects[_Index] = {}
-
-    				for Index = 1, 6 do
-    					Value["Quad"..Index] = Drawingnew("Quad")
-    					ChamsEntryObjects[_Index]["Quad"..Index] = Value["Quad"..Index]
-    				end
-    			end
-
-    			local Visibility = function(Value)
-    				for _, _Value in next, ChamsEntryObjects do
-    					for Index = 1, 6 do
-    						setrenderproperty(_Value["Quad"..Index], "Visible", Value)
-    					end
-    				end
-    			end
-
-    			Entry.Connections.Chams = Connect(__index(RunService, Environment.DeveloperSettings.UpdateMode), function()
+    			Entry.Connections.HeadDot = Connect(__index(RunService, Environment.DeveloperSettings.UpdateMode), function()
     				local Primed, Ready = pcall(function()
     					return Environment.Settings.Enabled and Settings.Enabled and Entry.Checks.Ready
     				end)
 
     				if not Primed then
-    					for _, Value in next, ChamsEntry do
-    						pcall(Value.Remove, Value)
-    					end
-
-    					return Disconnect(Entry.Connections.Chams)
+    					pcall(Circle.Remove, Circle)
+    					pcall(CircleOutline.Remove, CircleOutline)
+    					return Disconnect(Entry.Connections.HeadDot)
     				end
 
     				if Ready then
-    					local Character = PlayerCharacter or __index(Object, "Parent")
-
-    					if Character and IsDescendantOf(Character, Workspace) then
-    						for Index, Value in next, ChamsEntryObjects do
-    							local Part = WaitForChild(Character, Index, Inf)
-
-    							if Part and IsDescendantOf(Part, Workspace) then
-    								UpdatingFunctions.Chams(Entry, Part, Value)
-    							else
-    								Visibility(false)
-    							end
-    						end
-    					else
-    						Visibility(false)
-    					end
+    					UpdatingFunctions.HeadDot(Entry, CircleObject, CircleOutlineObject)
     				else
-    					Visibility(false)
+    					setrenderproperty(CircleObject, "Visible", false)
+    					setrenderproperty(CircleOutlineObject, "Visible", false)
     				end
     			end)
     		end,
 
-    		Highlight = function(Entry)
-    			local Settings = Environment.Properties.Highlight
+    		Skeleton = function(Entry)
     			local Allowed = Entry.Allowed
+    			local Settings = Environment.Properties.Skeleton
 
-    			if type(Allowed) == "table" and type(Allowed.Highlight) == "boolean" and not Allowed.Highlight then
+    			if type(Allowed) == "table" and type(Allowed.Skeleton) == "boolean" and not Allowed.Skeleton then
     				return
     			end
 
-    			local Character = Entry.IsAPlayer and __index(Entry.Object, "Character") or __index(Entry.Object, "Parent")
+    			local RigType = Entry.RigType
 
-    			if not Character and Entry.IsAPlayer then
-    				repeat
-    					Character = __index(Entry.Object, "Character"); wait()
-    				until Character
+    			if RigType == "Viewmodel" then
+    				Entry.Visuals.Skeleton = {
+    					Spine        = Drawingnew("Line"),
+    					LeftArm_Upper  = Drawingnew("Line"), LeftArm_Lower  = Drawingnew("Line"),
+    					RightArm_Upper = Drawingnew("Line"), RightArm_Lower = Drawingnew("Line"),
+    					LeftLeg_Upper  = Drawingnew("Line"), LeftLeg_Lower  = Drawingnew("Line"),
+    					RightLeg_Upper = Drawingnew("Line"), RightLeg_Lower = Drawingnew("Line"),
+    				}
+    			elseif RigType == "R6" then
+    				Entry.Visuals.Skeleton = {
+    					Spine_Start = Drawingnew("Line"), Spine_End = Drawingnew("Line"),
+    					LeftArm_Start = Drawingnew("Line"), LeftArm_End = Drawingnew("Line"),
+    					RightArm_Start = Drawingnew("Line"), RightArm_End = Drawingnew("Line"),
+    					LeftLeg_Start = Drawingnew("Line"), LeftLeg_End = Drawingnew("Line"),
+    					RightLeg_Start = Drawingnew("Line"), RightLeg_End = Drawingnew("Line"),
+    				}
+    			else
+    				return
     			end
 
-    			Entry.Visuals.Highlight = Instancenew("Highlight", Character)
+    			local SkeletonEntry = Entry.Visuals.Skeleton
 
-    			local Highlight = Entry.Visuals.Highlight
-
-    			__newindex(Highlight, "Name", "EXUNYS_HIGHLIGHT")
-
-    			Entry.Connections.Highlight = Connect(__index(RunService, Environment.DeveloperSettings.UpdateMode), function()
+    			Entry.Connections.Skeleton = Connect(__index(RunService, Environment.DeveloperSettings.UpdateMode), function()
     				local Primed, Ready = pcall(function()
     					return Environment.Settings.Enabled and Settings.Enabled and Entry.Checks.Ready
     				end)
 
     				if not Primed then
-    					pcall(Highlight.Destroy, Highlight)
-
-    					return Disconnect(Entry.Connections.Highlight)
+    					for _, Value in next, SkeletonEntry do pcall(Value.Remove, Value) end
+    					return Disconnect(Entry.Connections.Skeleton)
     				end
 
-    				Character = Entry.IsAPlayer and __index(Entry.Object, "Character") or __index(Entry.Object, "Parent")
-
-    				if Character and IsDescendantOf(Character, Workspace) and FindFirstChild(Character, "EXUNYS_HIGHLIGHT") then
-    					if Ready then
-    						UpdatingFunctions.Highlight(Entry, Highlight)
-    					else
-    						pcall(Highlight.Destroy, Highlight)
-    						Entry.Visuals.Highlight = Instancenew("Highlight", Character)
-    						Highlight = Entry.Visuals.Highlight
-    						__newindex(Highlight, "Name", "EXUNYS_HIGHLIGHT")
-    						__newindex(Highlight, "Enabled", false)
-    					end
+    				if Ready then
+    					UpdatingFunctions.Skeleton(Entry)
     				else
-    					pcall(Highlight.Destroy, Highlight)
-    					if Character then
-    						Entry.Visuals.Highlight = Instancenew("Highlight", Character)
-    						Highlight = Entry.Visuals.Highlight
-    						__newindex(Highlight, "Name", "EXUNYS_HIGHLIGHT")
-    						__newindex(Highlight, "Enabled", false)
-    					end
+    					for _, Value in next, SkeletonEntry do setrenderproperty(Value, "Visible", false) end
     				end
     			end)
+    		end
     		end
     	}
         end)()
@@ -1689,6 +1664,9 @@ run_on_actor(getactors()[1], [[
     					Entry.RigType = Humanoid and FindFirstChild(__index(Part, "Parent"), "Torso") and "R6" or "R15"
     					Entry.RigType = Entry.RigType == "N/A" and Humanoid and (__index(Humanoid, "RigType") == 0 and "R6" or "R15") or "N/A" -- Deprecated method (might be faulty sometimes)
     					Entry.RigType = Entry.RigType == "N/A" and Humanoid and (__index(Humanoid, "RigType") == Enum.HumanoidRigType.R6 and "R6" or "R15") or "N/A" -- Secondary check
+    					if IsAPlayer and Entry.RigType == "N/A" and playerToViewmodel[Player] then
+    						Entry.RigType = "Viewmodel"
+    					end
     				end
     			end)
     		end,
@@ -1761,7 +1739,9 @@ run_on_actor(getactors()[1], [[
     					ESP = {},
     					Tracer = {},
     					Box = {},
-    					HealthBar = {}
+    					HealthBar = {},
+    					HeadDot = {},
+    					Skeleton = {},
     				},
 
     				Connections = {}
@@ -1803,8 +1783,8 @@ run_on_actor(getactors()[1], [[
     				CreatingFunctions.Tracer(Entry)
     				CreatingFunctions.HealthBar(Entry)
     				CreatingFunctions.ESP(Entry)
-    				--CreatingFunctions.Chams(Entry)
-    				CreatingFunctions.Highlight(Entry)
+    				CreatingFunctions.HeadDot(Entry)
+    				CreatingFunctions.Skeleton(Entry)
 
     				--delay(1, CoreFunctions.ResetScreenDistortion, CoreFunctions)
     			end)
@@ -1831,10 +1811,6 @@ run_on_actor(getactors()[1], [[
     					end
 
     					if Value.Visuals then
-    						if Value.Visuals.Highlight then
-    							pcall(Value.Visuals.Highlight.Destroy, Value.Visuals.Highlight); Value.Visuals.Highlight = nil
-    						end
-
     						Recursive(Value.Visuals, function(_, _Value)
     							if type(_Value) == "table" and _Value then
     								pcall(_Value.Remove, _Value)
@@ -6622,18 +6598,22 @@ run_on_actor(getactors()[1], [[
     HealthGroup:AddSlider('HealthBarOffset',   { Text = 'Offset',    Default = ESP.Properties.HealthBar.Offset,    Min = 0, Max = 20, Rounding = 0, Callback = function(v) ESP.Properties.HealthBar.Offset    = v end })
     HealthGroup:AddToggle('HealthBarOutline',  { Text = 'Outline',   Default = ESP.Properties.HealthBar.Outline,   Callback = function(v) ESP.Properties.HealthBar.Outline   = v end })
 
-    -- Misc Visuals
-    local MiscVisuals = Tabs.Visuals:AddLeftGroupbox('Misc Visuals')
-    MiscVisuals:AddToggle('ChamsEnabled',              { Text = 'Chams',              Default = ESP.Properties.Chams.Enabled,             Callback = function(v) ESP.Properties.Chams.Enabled             = v end })
-    MiscVisuals:AddToggle('RainbowChams',              { Text = 'Rainbow Chams',      Default = ESP.Properties.Chams.RainbowColor,        Callback = function(v) ESP.Properties.Chams.RainbowColor        = v end })
-    MiscVisuals:AddLabel('Chams Color'):AddColorPicker('ChamsColor', { Text = 'Chams Color', Default = ESP.Properties.Chams.Color, Callback = function(v) ESP.Properties.Chams.Color = v end })
-    MiscVisuals:AddSlider('ChamsTransparency',         { Text = 'Chams Transparency', Default = ESP.Properties.Chams.Transparency * 100,  Min = 0, Max = 100, Rounding = 0, Suffix = '%', Callback = function(v) ESP.Properties.Chams.Transparency = v / 100 end })
-    MiscVisuals:AddToggle('ChamsFilled',               { Text = 'Chams Filled',       Default = ESP.Properties.Chams.Filled,              Callback = function(v) ESP.Properties.Chams.Filled              = v end })
-    MiscVisuals:AddToggle('HighlightEnabled',          { Text = 'Highlight',          Default = ESP.Properties.Highlight.Enabled,         Callback = function(v) ESP.Properties.Highlight.Enabled         = v end })
-    MiscVisuals:AddToggle('RainbowHighlight',          { Text = 'Rainbow Highlight',  Default = ESP.Properties.Highlight.RainbowColor,    Callback = function(v) ESP.Properties.Highlight.RainbowColor    = v end })
-    MiscVisuals:AddLabel('Fill Color'):AddColorPicker('HighlightFillColor', { Text = 'Fill Color', Default = ESP.Properties.Highlight.FillColor, Callback = function(v) ESP.Properties.Highlight.FillColor = v end })
-    MiscVisuals:AddSlider('HighlightFillTransparency', { Text = 'Fill Transparency',  Default = ESP.Properties.Highlight.FillTransparency * 100, Min = 0, Max = 100, Rounding = 0, Suffix = '%', Callback = function(v) ESP.Properties.Highlight.FillTransparency = v / 100 end })
-    MiscVisuals:AddToggle('HighlightHealthColor',      { Text = 'Health-Based Color', Default = ESP.Properties.Highlight.HealthColor,     Callback = function(v) ESP.Properties.Highlight.HealthColor     = v end })
+    -- Head Dot
+    local HeadDotGroup = Tabs.Visuals:AddLeftGroupbox('Head Dot')
+    HeadDotGroup:AddToggle('HeadDotEnabled', { Text = 'Enabled',       Default = ESP.Properties.HeadDot.Enabled,        Callback = function(v) ESP.Properties.HeadDot.Enabled        = v end })
+    HeadDotGroup:AddToggle('HeadDotRainbow', { Text = 'Rainbow Color', Default = ESP.Properties.HeadDot.RainbowColor,   Callback = function(v) ESP.Properties.HeadDot.RainbowColor   = v end })
+    HeadDotGroup:AddLabel('Color'):AddColorPicker('HeadDotColor', { Default = ESP.Properties.HeadDot.Color, Callback = function(v) ESP.Properties.HeadDot.Color = v end })
+    HeadDotGroup:AddSlider('HeadDotThickness', { Text = 'Thickness', Default = ESP.Properties.HeadDot.Thickness, Min = 1, Max = 5, Rounding = 0, Callback = function(v) ESP.Properties.HeadDot.Thickness = v end })
+    HeadDotGroup:AddToggle('HeadDotOutline', { Text = 'Outline',       Default = ESP.Properties.HeadDot.Outline,        Callback = function(v) ESP.Properties.HeadDot.Outline        = v end })
+    HeadDotGroup:AddLabel('Outline Color'):AddColorPicker('HeadDotOutlineColor', { Default = ESP.Properties.HeadDot.OutlineColor, Callback = function(v) ESP.Properties.HeadDot.OutlineColor = v end })
+    HeadDotGroup:AddToggle('HeadDotFilled', { Text = 'Filled',         Default = ESP.Properties.HeadDot.Filled,         Callback = function(v) ESP.Properties.HeadDot.Filled         = v end })
+
+    -- Skeleton
+    local SkeletonGroup = Tabs.Visuals:AddRightGroupbox('Skeleton')
+    SkeletonGroup:AddToggle('SkeletonEnabled', { Text = 'Enabled',       Default = ESP.Properties.Skeleton.Enabled,      Callback = function(v) ESP.Properties.Skeleton.Enabled      = v end })
+    SkeletonGroup:AddToggle('SkeletonRainbow', { Text = 'Rainbow Color', Default = ESP.Properties.Skeleton.RainbowColor, Callback = function(v) ESP.Properties.Skeleton.RainbowColor = v end })
+    SkeletonGroup:AddLabel('Color'):AddColorPicker('SkeletonColor', { Default = ESP.Properties.Skeleton.Color, Callback = function(v) ESP.Properties.Skeleton.Color = v end })
+    SkeletonGroup:AddSlider('SkeletonThickness', { Text = 'Thickness', Default = ESP.Properties.Skeleton.Thickness, Min = 1, Max = 5, Rounding = 0, Callback = function(v) ESP.Properties.Skeleton.Thickness = v end })
 
     -- ==================== DRONES ====================
 
@@ -6687,8 +6667,8 @@ run_on_actor(getactors()[1], [[
             ESP.Properties.Tracer.Enabled = false
             ESP.Properties.Box.Enabled = false
             ESP.Properties.HealthBar.Enabled = false
-            ESP.Properties.Chams.Enabled = false
-            ESP.Properties.Highlight.Enabled = false
+            ESP.Properties.HeadDot.Enabled = false
+            ESP.Properties.Skeleton.Enabled = false
         end
 
         DS.Enabled = false
