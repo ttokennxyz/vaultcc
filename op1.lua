@@ -6529,13 +6529,13 @@ run_on_actor(getactors()[1], [[
     -- Main ESP
     local MainESPGroup = Tabs.Visuals:AddLeftGroupbox('Main ESP')
     MainESPGroup:AddToggle('ESPEnabled',       { Text = 'ESP Enabled',        Default = ESP.Settings.Enabled,          Callback = function(v) ESP.Settings.Enabled          = v end })
-    MainESPGroup:AddToggle('PartsOnly',        { Text = 'Parts Only',         Default = ESP.Settings.PartsOnly,        Callback = function(v) ESP.Settings.PartsOnly        = v end })
+    --MainESPGroup:AddToggle('PartsOnly',        { Text = 'Parts Only',         Default = ESP.Settings.PartsOnly,        Callback = function(v) ESP.Settings.PartsOnly        = v end })
     MainESPGroup:AddToggle('TeamCheck',        { Text = 'Team Check',         Default = ESP.Settings.TeamCheck,        Callback = function(v) ESP.Settings.TeamCheck        = v end })
     MainESPGroup:AddToggle('AliveCheck',       { Text = 'Alive Check',        Default = ESP.Settings.AliveCheck,       Callback = function(v) ESP.Settings.AliveCheck       = v end })
     MainESPGroup:AddToggle('EnableTeamColors', { Text = 'Enable Team Colors', Default = ESP.Settings.EnableTeamColors, Callback = function(v) ESP.Settings.EnableTeamColors = v end })
     MainESPGroup:AddLabel('Team Color'):AddColorPicker('TeamColor', { Text = 'Team Color', Default = ESP.Settings.TeamColor, Callback = function(v) ESP.Settings.TeamColor = v end })
-    MainESPGroup:AddToggle('CachePositions',   { Text = 'Cache Positions',    Default = ESP.Settings.CachePositions,   Callback = function(v) ESP.Settings.CachePositions   = v end })
-    MainESPGroup:AddToggle('EntityESP',        { Text = 'Entity ESP',         Default = ESP.Settings.EntityESP,        Callback = function(v) ESP.Settings.EntityESP        = v end })
+    --MainESPGroup:AddToggle('CachePositions',   { Text = 'Cache Positions',    Default = ESP.Settings.CachePositions,   Callback = function(v) ESP.Settings.CachePositions   = v end })
+    --MainESPGroup:AddToggle('EntityESP',        { Text = 'Entity ESP',         Default = ESP.Settings.EntityESP,        Callback = function(v) ESP.Settings.EntityESP        = v end })
 
     -- Name / Text ESP
     local TextGroup = Tabs.Visuals:AddRightGroupbox('Name / Text ESP')
