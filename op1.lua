@@ -6455,7 +6455,7 @@ run_on_actor(getactors()[1], [[
     local rs                    = cloneref(game:GetService('ReplicatedStorage'))
     local gun_handler           = require(rs.Modules.Items.Item.Gun)
 
-    local old_shoot_look; old_shoot_look = hookfunction(gun_handler.get_shoot_look, newlclosure(function(shoot_cframe)
+    local old_shoot_look; old_shoot_look = hookfunction(gun_handler.get_shoot_look, function(shoot_cframe)
         local result = old_shoot_look(shoot_cframe)
 
         --print("[hook] get_shoot_look fired, result type=" .. typeof(result))
@@ -6472,7 +6472,7 @@ run_on_actor(getactors()[1], [[
         end
 
         return result
-    end))
+    end)
 
     local Window = Library:CreateWindow({
         Title = 'vault.cc | Operation One',
