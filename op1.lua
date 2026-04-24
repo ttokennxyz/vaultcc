@@ -1691,7 +1691,7 @@ run_on_actor(getactors()[1], [[
     			do
     				local Signal = {pcall(gethiddenproperty, Object, "PrimaryPart")}
 
-    				if Signal[1] and typeof(Signal[2]) ~= "number" then
+    				if Signal[1] and Signal[2] ~= nil and typeof(Signal[2]) ~= "number" then
     					Object = __index(Object, "PrimaryPart")
     				end
     			end
