@@ -6285,6 +6285,7 @@ run_on_actor(getactors()[1], [[
         MeleeLength = 2.95,
         RemoveKickback = false,
         ReloadOverride = false,
+        SprintOverride = false,
     }
 
     local function cfr(from, to)
@@ -6491,7 +6492,70 @@ run_on_actor(getactors()[1], [[
             meleeLengthConst = i
         end
     end
+    
+    local input_shoot = gun_handler.input_shoot
+    local old_input_shoot; old_input_shoot = hookfunction(input_shoot, function(p303, p304, p305)
+        local v_u_11, v_u_9 = getupvalue(old_input_shoot, 1), getupvalue(old_input_shoot, 2)
+        local v306 = p303.owner
+    	if v306 and (v306.values.equipped == p303 and (not p303.safety:get() or p303.accuracy.Value >= 1)) and not ((not settings.SprintOverride and v306.states.running:get()) or v306.values.equip_debounce:get()) then
+    		local v307 = os.clock()
+    		local v308 = p303.states.firerate:get()
+    		if (p303.burst_left or 0) <= 0 and (p304 and (not p305 or p303.automatic) or not p304 and (p305 and (not p303.automatic and p303.shoot_hold))) and (v308 == 0 or v307 - p303.last_shot > 1 / (v308 / 60)) then
+    			if p303.states.mag:get() > 0 and p303.states.chambered:get() then
+    				p303.last_shot = v307
+    				p303:send_shoot()
+    				if p303.burst then
+    					p303.burst_left = p303.burst - 1
+    				end
+    			else
+    				p303:reload(v306, false)
+    			end
+    		end
+    	end
+    	if v_u_11.settings.auto_ads and (p305 or not v_u_9.get("ShootJoystickFrame").Visible) then
+    		if p304 and not p303.states.sights:get() then
+    			p303:input_ads(true, not v_u_11.settings.lock_auto_ads)
+    		elseif not (p304 or (v_u_9.get("CancelScope").Visible or v_u_11.settings.lock_auto_ads)) then
+    			p303:input_ads(false, true)
+    		end
+    	end
+    	p303.shoot_hold = p304
+    end) 
 
+    local input_render = gun_handler.input_render
+    local old_input_render; old_input_render = hookfunction(input_render, function(self, _)
+        local Data = getupvalue(old_input_render, 1)
+        local player = self.owner
+    	if player.values.prone_debounce or player.values.equip_debounce:get() then
+    		self:reload(player, false)
+    		self:cock(player, false)
+    	elseif not self.cock_thread.running and (not self.reload_thread.running and (not self.states.chambered:get() and (not player.values.equip_debounce:get() and (not self.states.reload:get() and (player.states.vault:get() == 0 and (self.states.loaded:get() and self.states.mag:get() > 0)))))) then
+    		self.states.cock:fire_instant()
+    	end
+    	local _ = player.values.viewmodels.head
+    	if not Data.settings.toggle_aim then
+    		if self.ads_hold and not (self.reload_thread.running or (self.meleeing or (player.states.running:get() or (player.values.prone_debounce or player.values.equip_debounce:get())))) then
+    			self.states.sights:set(true)
+    		else
+    			self.states.sights:set(false)
+    		end
+    	end
+    	if self.automatic and (self.shoot_hold or self.burst_left and self.burst_left > 0) and ((not self.safety:get() or self.accuracy.Value >= 1) and not (player.values.equip_debounce:get() or (not settings.SprintOverride and player.states.running:get()))) then
+    		local now = os.clock()
+    		local firerate = self.states.firerate:get()
+    		if (firerate == 0 or now - self.last_shot > 1 / (firerate / 60)) and (self.states.mag:get() > 0 and self.states.chambered:get()) then
+    			self.last_shot = now
+    			self:send_shoot()
+    			if self.burst_left then
+    				self.burst_left = self.burst_left - 1
+    			end
+    		end
+    	end
+    	if self.states.reload:get() and player.values.equip_debounce:get() then
+    		self:reload(player, false)
+    	end
+    end)
+    
     local kickback = gun_handler.kickback
     local oldkickback; oldkickback = hookfunction(kickback, function(...)
         if settings.RemoveKickback then
@@ -6512,7 +6576,7 @@ run_on_actor(getactors()[1], [[
     	end
     end)
 
-    local old_vault; old_fault = hookfunction(vault, function(p96, p97, p98)
+    local old_vault; old_vault = hookfunction(vault, function(p96, p97, p98)
         if (p98 > 0) and not settings.ReloadOverride then
     		p96:reload(p97, false)
     		p96:cock(p97, false)
@@ -6660,7 +6724,8 @@ run_on_actor(getactors()[1], [[
 
     SilentGroup:AddToggle('RemoveKickback', { Text = 'Remove Gun Kickback', Default = settings.RemoveKickback, Tooltip = 'removes the gun kickback' })
     SilentGroup:AddToggle('ReloadOverride', { Text = 'Reload Override', Default = settings.ReloadOverride, Tooltip = 'allows you to reload while running, vaulting, etc' })
-
+    SilentGroup:AddToggle('SprintOverride', { Text = 'Sprint Override', Default = settings.SprintOverride, Tooltip = 'allows you to shoot while running' })
+    
     Toggles.SilentEnabled:OnChanged(function() settings.SilentEnabled = Toggles.SilentEnabled.Value end)
     Toggles.FovCircleEnabled:OnChanged(function() settings.SilentFovCircle = Toggles.FovCircleEnabled.Value end)
     Options.FovSize:OnChanged(function() settings.SilentFov = Options.FovSize.Value end)
@@ -6670,7 +6735,7 @@ run_on_actor(getactors()[1], [[
     Options.RecoilSide:OnChanged(function() settings.RecoilSide = Options.RecoilSide.Value / 100 end)
     Toggles.RemoveKickback:OnChanged(function() settings.RemoveKickback = Toggles.RemoveKickback.Value end)
     Toggles.ReloadOverride:OnChanged(function() settings.ReloadOverride = Toggles.ReloadOverride.Value end)
-
+    Toggles.SprintOverride:OnChanged(function() settings.SprintOverride = Toggles.SprintOverride.Value end)
 
 
     -- ==================== VISUALS ====================
