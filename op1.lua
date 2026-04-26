@@ -6274,14 +6274,17 @@ run_on_actor(getactors()[1], [[
     local SaveManager = getgenv().SaveManager
 
     local settings = {
-        SilentEnabled = true,
-        SilentFovCircle = true,
+        SilentEnabled = false,
+        SilentFovCircle = false,
         SilentFov = 100,
         SilentFovCircleColor = Color3.new(1,1,1),
-        RecoilUp = 0.3,
-        RecoilSide = 0,
-        Spread = 0,
+        RecoilUp = 1,
+        RecoilSide = 1,
+        Spread = 1,
         HitPart = "torso",
+        MeleeLength = 2.95,
+        RemoveKickback = false,
+        ReloadOverride = false,
     }
 
     local function cfr(from, to)
@@ -6349,15 +6352,22 @@ run_on_actor(getactors()[1], [[
 
     local recoil_func = nil
     local shoot_func = nil
+    local reload_funcs = {}
+    local reload_hook_paused = nil
 
     for _,v in pairs(gc) do
         if typeof(v) == 'function' and islclosure(v) then
             local dbg = debug.getinfo(v)
             local name = dbg.name
+            local src = dbg.source
+            local params = dbg.nparams
+            local constants = getconstants(v)
             if dbg.short_src:find("Gun") and name and string.find(name, "recoil_function") then
                 recoil_func = v
             elseif dbg.short_src:find("Gun") and name and string.find(name, "send_shoot") then
                 shoot_func = v
+            elseif table.find(constants, 'owner') and table.find(constants, 'fire') and table.find(constants, 'reload') and table.find(constants, 'reload_thread') and table.find(constants, 'running') and table.find(constants, 'values') and table.find(constants, 'mag_size') and table.find(constants, 'get') and table.find(constants, 'equip_debounce') and table.find(constants, 'can_reload') and table.find(constants, 0) then
+                table.insert(reload_funcs, v)
             end
         end
     end
@@ -6474,6 +6484,136 @@ run_on_actor(getactors()[1], [[
         return result
     end)
 
+    local send_melee = gun_handler.send_melee
+    local meleeLengthConst = nil
+    for i,v in pairs(getconstants(send_melee)) do
+        if v == 2.95 then
+            meleeLengthConst = i
+        end
+    end
+
+    local kickback = gun_handler.kickback
+    local oldkickback; oldkickback = hookfunction(kickback, function(...)
+        if settings.RemoveKickback then
+            return
+        else
+            return oldkickback(...)
+        end
+    end)
+
+    local walk_state = gun_handler.walk_state
+    local vault = gun_handler.vault
+    local running = gun_handler.running
+
+    local old_walk_state; old_walk_state = hookfunction(walk_state, function(p92, p93, p94, p95)
+        if (p94 == "prone" or p95 == "prone") and not settings.ReloadOverride then
+    		p92:reload(p93, false)
+    		p92:cock(p93, false)
+    	end
+    end)
+
+    local old_vault; old_fault = hookfunction(vault, function(p96, p97, p98)
+        if (p98 > 0) and not settings.ReloadOverride then
+    		p96:reload(p97, false)
+    		p96:cock(p97, false)
+    	end
+    end)
+
+    local old_running; old_running = hookfunction(running, function(p88, p89, p90)
+    local v91 = p89.values.cframes:get("arms"):get_offset("run")
+	if p90 and not settings.ReloadOverride then
+		p88:running_pivots(p89, true)
+		p88.states.sights:set(false)
+		if not settings.ReloadOverride then
+		    p88:reload(p89, false)
+		end
+		p89.values.cframes:get("arms"):set_offset("run")
+		p88.anim.Run.run_offset(v91)
+	else
+		p88:running_pivots(p89, false)
+		p88.anim.Run.base(v91).Completed:Wait()
+		p89.values.cframes:get("arms"):remove_offset("run")
+	end
+    end)
+
+    for i,v in pairs(reload_funcs) do -- might break? i had stack overflow a couple of times with this
+        reload_funcs[i] = hookfunction(reload_funcs[i], function(isDown)
+            local self = getupvalue(reload_funcs[i], 1)
+            local player = self.owner
+            local reloadOverride = settings.ReloadOverride
+            local canReload = isDown and (player and (not self.reload_thread.running and (not player.values.equip_debounce:get() and (player.values.equipped == self and (
+                (reloadOverride or player.states.vault:get() == 0) and
+                (reloadOverride or not player.states.running:get()) and
+                (reloadOverride or not player.values.prone_debounce) and
+                self.states.bullets:get() > 0
+            )))))
+            if canReload and self.states.mag:get() - (self.cylinder and 0 or 1) < self.states.mag_size:get() then
+                self.states.sights:set(false)
+                self.ads_hold = false
+                local holding = player.values.holding
+                if holding and holding.can_reload == false then
+                    player.states.holding:set(player.values.hands)
+                    while player.values.equip_debounce:get() or player.values.holding == holding do
+                        player.values.equip_debounce:wait()
+                    end
+                end
+                self.states.reload:fire()
+            end
+        end)
+    end
+
+    local StateObject = require(game.ReplicatedStorage.Modules.StateObject)
+
+    local function applyReloadOverride(weaponObject)
+        local reloadEvent = weaponObject.states.reload
+        if not reloadEvent or not reloadEvent.pause_hooks then return end
+
+        for i, func in pairs(reloadEvent.pause_hooks) do
+            local _, upval = debug.getupvalue(func, 1)
+            if upval == weaponObject then
+                local cancellingReload = false
+                local old; old = hookfunction(reloadEvent.pause_hooks[i], function(newVal, oldVal)
+                    if newVal ~= oldVal and not cancellingReload then
+                        if weaponObject.owner then
+                            local reloadOverride = settings.ReloadOverride
+                            local player = weaponObject.owner
+                            local shouldCancel = not reloadOverride and (
+                                player.states.vault:get() ~= 0 or
+                                player.states.running:get() or
+                                player.values.prone_debounce
+                            )
+                            if shouldCancel then
+                                cancellingReload = true
+                                weaponObject:reload(weaponObject.owner, false)
+                                cancellingReload = false
+                            end
+                        end
+                    end
+                end)
+                break
+            end
+        end
+    end
+
+    local function hookGunType(folder)
+        for _, child in pairs(folder:GetChildren()) do
+            if child.Name ~= "Animations" and child.Name ~= "Sounds" then
+                StateObject.hook(child.Name, function(weaponObject)
+                    applyReloadOverride(weaponObject)
+                end)
+            end
+        end
+    end
+
+    local guns = game.ReplicatedStorage.Modules.Items.Item.Gun
+    hookGunType(guns.Automatic)
+
+    for _, subfolder in pairs(guns.Semi:GetChildren()) do
+        if subfolder.Name ~= "Animations" and subfolder.Name ~= "Sounds" then
+            hookGunType(subfolder)
+        end
+    end
+
     local Window = Library:CreateWindow({
         Title = 'vault.cc | Operation One',
         Center = true,
@@ -6502,18 +6642,24 @@ run_on_actor(getactors()[1], [[
     SilentGroup:AddSlider('SpreadMultiplier', { -- 0-1
         Text = 'Spread Amount',
         Default = settings.Spread * 100,
-        Min = 0, Max = 100, Rounding = 0, Suffix = '%'
+        Min = 0, Max = 100, Rounding = 0, Suffix = '%',
+        Tooltip = 'modifies the spread of the gun so bullets are more accurate'
     })
     SilentGroup:AddSlider('RecoilUp', { -- 0-1
         Text = 'Recoil Up',
         Default = settings.RecoilUp * 100,
-        Min = 0, Max = 100, Rounding = 0, Suffix = '%'
+        Min = 0, Max = 100, Rounding = 0, Suffix = '%',
+        Tooltip = 'modifies the amount of recoil on the y-axis for the gun'
     })
     SilentGroup:AddSlider('RecoilSide', { -- 0-1
         Text = 'Recoil Side',
         Default = settings.RecoilSide * 100,
-        Min = 0, Max = 100, Rounding = 0, Suffix = '%'
+        Min = 0, Max = 100, Rounding = 0, Suffix = '%',
+        Tooltip = 'modifies the amount of recoil on the x-axis for the gun'
     })
+
+    SilentGroup:AddToggle('RemoveKickback', { Text = 'Remove Gun Kickback', Default = settings.RemoveKickback, Tooltip = 'removes the gun kickback' })
+    SilentGroup:AddToggle('ReloadOverride', { Text = 'Reload Override', Default = settings.ReloadOverride, Tooltip = 'allows you to reload while running, vaulting, etc' })
 
     Toggles.SilentEnabled:OnChanged(function() settings.SilentEnabled = Toggles.SilentEnabled.Value end)
     Toggles.FovCircleEnabled:OnChanged(function() settings.SilentFovCircle = Toggles.FovCircleEnabled.Value end)
@@ -6522,6 +6668,9 @@ run_on_actor(getactors()[1], [[
     Options.SpreadMultiplier:OnChanged(function() settings.Spread = Options.SpreadMultiplier.Value / 100 end)
     Options.RecoilUp:OnChanged(function() settings.RecoilUp = Options.RecoilUp.Value / 100 end)
     Options.RecoilSide:OnChanged(function() settings.RecoilSide = Options.RecoilSide.Value / 100 end)
+    Toggles.RemoveKickback:OnChanged(function() settings.RemoveKickback = Toggles.RemoveKickback.Value end)
+    Toggles.ReloadOverride:OnChanged(function() settings.ReloadOverride = Toggles.ReloadOverride.Value end)
+
 
 
     -- ==================== VISUALS ====================
