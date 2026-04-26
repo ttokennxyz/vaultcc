@@ -6286,6 +6286,7 @@ run_on_actor(getactors()[1], [[
         RemoveKickback = false,
         ReloadOverride = false,
         SprintOverride = false,
+        OmniSprint = false,
     }
 
     local function cfr(from, to)
@@ -6349,12 +6350,15 @@ run_on_actor(getactors()[1], [[
         BoxFillTransparency = 0.5
     }
 
+    -- potentially could do AntiFlash (line 1462 character.luau)
+    -- potentially could do quick vault? (line 1030 character.luau)
+
     local gc = getgc()
 
     local recoil_func = nil
     local shoot_func = nil
     local reload_funcs = {}
-    local reload_hook_paused = nil
+    local render_running = nil
 
     for _,v in pairs(gc) do
         if typeof(v) == 'function' and islclosure(v) then
@@ -6369,6 +6373,8 @@ run_on_actor(getactors()[1], [[
                 shoot_func = v
             elseif table.find(constants, 'owner') and table.find(constants, 'fire') and table.find(constants, 'reload') and table.find(constants, 'reload_thread') and table.find(constants, 'running') and table.find(constants, 'values') and table.find(constants, 'mag_size') and table.find(constants, 'get') and table.find(constants, 'equip_debounce') and table.find(constants, 'can_reload') and table.find(constants, 0) then
                 table.insert(reload_funcs, v)
+            elseif name == 'render_running' then
+                render_running = v
             end
         end
     end
@@ -6492,7 +6498,7 @@ run_on_actor(getactors()[1], [[
             meleeLengthConst = i
         end
     end
-    
+
     local input_shoot = gun_handler.input_shoot
     local old_input_shoot; old_input_shoot = hookfunction(input_shoot, function(p303, p304, p305)
         local v_u_11, v_u_9 = getupvalue(old_input_shoot, 1), getupvalue(old_input_shoot, 2)
@@ -6520,7 +6526,7 @@ run_on_actor(getactors()[1], [[
     		end
     	end
     	p303.shoot_hold = p304
-    end) 
+    end)
 
     local input_render = gun_handler.input_render
     local old_input_render; old_input_render = hookfunction(input_render, function(self, _)
@@ -6555,7 +6561,7 @@ run_on_actor(getactors()[1], [[
     		self:reload(player, false)
     	end
     end)
-    
+
     local kickback = gun_handler.kickback
     local oldkickback; oldkickback = hookfunction(kickback, function(...)
         if settings.RemoveKickback then
@@ -6678,6 +6684,45 @@ run_on_actor(getactors()[1], [[
         end
     end
 
+    local old_render_running; old_render_running = hookfunction(render_running, function(p406)
+        local v_u_19, v_u_9 = getupvalue(old_render_running, 1), getupvalue(old_render_running, 2)
+
+        local v407 = p406.values.inputs
+        local v408 = p406.states.walk_state:get()
+        local v409 = p406.values.equipped
+        if (v407:get("run"):holding() or p406.values.running_toggled) and (p406.values.move_vector and (p406.values.move_vector.Magnitude > 0.5 and (v409.states.sights == nil or not v409.states.sights:get())) and (p406.values.walking:get() and (((p406.values.move_direction.Z <= -0.5) or settings.OmniSprint) and (p406.states.climbing:get() == 0 and (p406.states.speed_multiplier:get() >= 1 and (p406.states.vault:get() == 0 and (not p406.values.equip_debounce:get() and (not p406.values.prone_debounce and (p406.values.equipped == nil or (p406.values.equipped.states.melee == nil or not p406.values.equipped.states.melee:get())))))))) and (p406.values.holding == nil or p406.values.holding.can_run ~= false))) then
+            if v408 == "stand" or v408 == "prone" and not v_u_19.tightspace(p406, CFrame.new(0, 2, 0)) or v408 == "crouch" and not v_u_19.tightspace(p406, CFrame.new(0, 1.15, 0)) then
+                p406.states.running:set(true)
+                if v_u_9.settings.auto_vault and p406.values.can_vault then
+                    p406.values.can_vault = false
+                    task.spawn(v_u_19.vault, p406)
+                end
+            else
+                p406.states.running:set(false)
+                p406.values.running_toggled = false
+            end
+        else
+            p406.states.running:set(false)
+            p406.values.running_toggled = false
+        end
+        if v407:get("slow_walk").key then
+            if not v_u_9.settings.toggle_slow_walk then
+                if v407:get("slow_walk"):holding() and p406.states.running:get() == false then
+                    p406.states.walking:set(true)
+                else
+                    p406.states.walking:set(false)
+                end
+            end
+        else
+            local v410 = p406.values.move_vector and (p406.values.move_vector.Magnitude or 0) or 0
+            if v410 > 0 and (v410 <= 0.5 and p406.states.running:get() == false) then
+                p406.states.walking:set(true)
+                return
+            end
+            p406.states.walking:set(false)
+        end
+    end)
+
     local Window = Library:CreateWindow({
         Title = 'vault.cc | Operation One',
         Center = true,
@@ -6725,7 +6770,8 @@ run_on_actor(getactors()[1], [[
     SilentGroup:AddToggle('RemoveKickback', { Text = 'Remove Gun Kickback', Default = settings.RemoveKickback, Tooltip = 'removes the gun kickback' })
     SilentGroup:AddToggle('ReloadOverride', { Text = 'Reload Override', Default = settings.ReloadOverride, Tooltip = 'allows you to reload while running, vaulting, etc' })
     SilentGroup:AddToggle('SprintOverride', { Text = 'Sprint Override', Default = settings.SprintOverride, Tooltip = 'allows you to shoot while running' })
-    
+    SilentGroup:AddToggle('OmniSprint', { Text = 'Omni Sprint', Default = settings.OmniSprint, Tooltip = 'allows you to run in any direction' })
+
     Toggles.SilentEnabled:OnChanged(function() settings.SilentEnabled = Toggles.SilentEnabled.Value end)
     Toggles.FovCircleEnabled:OnChanged(function() settings.SilentFovCircle = Toggles.FovCircleEnabled.Value end)
     Options.FovSize:OnChanged(function() settings.SilentFov = Options.FovSize.Value end)
@@ -6736,6 +6782,7 @@ run_on_actor(getactors()[1], [[
     Toggles.RemoveKickback:OnChanged(function() settings.RemoveKickback = Toggles.RemoveKickback.Value end)
     Toggles.ReloadOverride:OnChanged(function() settings.ReloadOverride = Toggles.ReloadOverride.Value end)
     Toggles.SprintOverride:OnChanged(function() settings.SprintOverride = Toggles.SprintOverride.Value end)
+    Toggles.OmniSprint:OnChanged(function() settings.OmniSprint = Toggles.OmniSprint.Value end)
 
 
     -- ==================== VISUALS ====================
