@@ -6360,6 +6360,45 @@ run_on_actor(getactors()[1], [[
     local reload_funcs = {}
     local render_running = nil
 
+    local function phookfunction(target, replacement)
+        if typeof(target) ~= "function" then
+            return nil
+        end
+
+        local ok, original = pcall(hookfunction, target, replacement)
+        if not ok then
+            return nil
+        end
+
+        return original
+    end
+
+    local function pgetupval(fn, index)
+        if typeof(fn) ~= "function" then
+            return nil
+        end
+
+        local ok, value = pcall(getupvalue, fn, index)
+        if not ok then
+            return nil
+        end
+
+        return value
+    end
+
+    local function pgetupvals(fn)
+        if typeof(fn) ~= "function" then
+            return nil
+        end
+
+        local ok, values = pcall(getupvalues, fn)
+        if not ok then
+            return nil
+        end
+
+        return values
+    end
+
     for _,v in pairs(gc) do
         if typeof(v) == 'function' and islclosure(v) then
             local dbg = debug.getinfo(v)
@@ -6379,15 +6418,18 @@ run_on_actor(getactors()[1], [[
         end
     end
 
-    local old; old = hookfunction(recoil_func, function(...)
+    local old; old = phookfunction(recoil_func, function(...)
         local args = {...}
 
         local camera_controller = args[2]
         local weapon = args[1]
 
-        local upvalues = getupvalues(old)
-        local v_u_4 = upvalues[1]
-        local v_u_8 = upvalues[2]
+        local upvalues = pgetupvals(old)
+        local v_u_4 = upvalues and upvalues[1]
+        local v_u_8 = upvalues and upvalues[2]
+        if not (v_u_4 and v_u_8 and v_u_8.tween) then
+            return old(...)
+        end
 
         -- upvalues: (copy) v_u_4, (copy) v_u_8
         camera_controller.values.cframes:get("camera"):remove_offset("shoot")
@@ -6435,14 +6477,17 @@ run_on_actor(getactors()[1], [[
         return (p277.RightVector * math.cos(v279) + p277.UpVector * math.sin(v279)) * v280
     end
 
-    local uvTable = {getupvalue(shoot_func,1), settings}
+    local uv_table = {pgetupval(shoot_func, 1), settings}
 
-    local olds; olds = hookfunction(shoot_func, function(...)
+    local olds; olds = phookfunction(shoot_func, function(...)
         local args = {...}
 
         local p281 = args[1]
-        local v_u_8 = uvTable[1]
-        local settings = uvTable[2]
+        local v_u_8 = uv_table[1]
+        local settings = uv_table[2]
+        if not (v_u_8 and v_u_8.validate_position) then
+            return olds(...)
+        end
 
         -- upvalues: (copy) v_u_8
         local v282 = p281.owner
@@ -6472,7 +6517,7 @@ run_on_actor(getactors()[1], [[
     local rs                    = cloneref(game:GetService('ReplicatedStorage'))
     local gun_handler           = require(rs.Modules.Items.Item.Gun)
 
-    local old_shoot_look; old_shoot_look = hookfunction(gun_handler.get_shoot_look, function(shoot_cframe)
+    local old_shoot_look; old_shoot_look = phookfunction(gun_handler.get_shoot_look, function(shoot_cframe)
         local result = old_shoot_look(shoot_cframe)
 
         --print("[hook] get_shoot_look fired, result type=" .. typeof(result))
@@ -6500,8 +6545,8 @@ run_on_actor(getactors()[1], [[
     end
 
     local input_shoot = gun_handler.input_shoot
-    local old_input_shoot; old_input_shoot = hookfunction(input_shoot, function(p303, p304, p305)
-        local v_u_11, v_u_9 = getupvalue(old_input_shoot, 1), getupvalue(old_input_shoot, 2)
+    local old_input_shoot; old_input_shoot = phookfunction(input_shoot, function(p303, p304, p305)
+        local v_u_11, v_u_9 = pgetupval(old_input_shoot, 1), pgetupval(old_input_shoot, 2)
         local v306 = p303.owner
     	if v306 and (v306.values.equipped == p303 and (not p303.safety:get() or p303.accuracy.Value >= 1)) and not ((not settings.SprintOverride and v306.states.running:get()) or v306.values.equip_debounce:get()) then
     		local v307 = os.clock()
@@ -6518,7 +6563,7 @@ run_on_actor(getactors()[1], [[
     			end
     		end
     	end
-    	if v_u_11.settings.auto_ads and (p305 or not v_u_9.get("ShootJoystickFrame").Visible) then
+    	if v_u_11 and v_u_11.settings and v_u_9 and v_u_9.get and v_u_11.settings.auto_ads and (p305 or not v_u_9.get("ShootJoystickFrame").Visible) then
     		if p304 and not p303.states.sights:get() then
     			p303:input_ads(true, not v_u_11.settings.lock_auto_ads)
     		elseif not (p304 or (v_u_9.get("CancelScope").Visible or v_u_11.settings.lock_auto_ads)) then
@@ -6529,8 +6574,9 @@ run_on_actor(getactors()[1], [[
     end)
 
     local input_render = gun_handler.input_render
-    local old_input_render; old_input_render = hookfunction(input_render, function(self, _)
-        local Data = getupvalue(old_input_render, 1)
+    local old_input_render; old_input_render = phookfunction(input_render, function(self, _)
+        local data = pgetupval(old_input_render, 1)
+        local data_settings = data and data.settings or {}
         local player = self.owner
     	if player.values.prone_debounce or player.values.equip_debounce:get() then
     		self:reload(player, false)
@@ -6539,7 +6585,7 @@ run_on_actor(getactors()[1], [[
     		self.states.cock:fire_instant()
     	end
     	local _ = player.values.viewmodels.head
-    	if not Data.settings.toggle_aim then
+    	if not data_settings.toggle_aim then
     		if self.ads_hold and not (self.reload_thread.running or (self.meleeing or (player.states.running:get() or (player.values.prone_debounce or player.values.equip_debounce:get())))) then
     			self.states.sights:set(true)
     		else
@@ -6563,7 +6609,7 @@ run_on_actor(getactors()[1], [[
     end)
 
     local kickback = gun_handler.kickback
-    local oldkickback; oldkickback = hookfunction(kickback, function(...)
+    local oldkickback; oldkickback = phookfunction(kickback, function(...)
         if settings.RemoveKickback then
             return
         else
@@ -6571,25 +6617,9 @@ run_on_actor(getactors()[1], [[
         end
     end)
 
-    local walk_state = gun_handler.walk_state
-    local vault = gun_handler.vault
     local running = gun_handler.running
 
-    local old_walk_state; old_walk_state = hookfunction(walk_state, function(p92, p93, p94, p95)
-        if (p94 == "prone" or p95 == "prone") and not settings.ReloadOverride then
-    		p92:reload(p93, false)
-    		p92:cock(p93, false)
-    	end
-    end)
-
-    local old_vault; old_vault = hookfunction(vault, function(p96, p97, p98)
-        if (p98 > 0) and not settings.ReloadOverride then
-    		p96:reload(p97, false)
-    		p96:cock(p97, false)
-    	end
-    end)
-
-    local old_running; old_running = hookfunction(running, function(p88, p89, p90)
+    local old_running; old_running = phookfunction(running, function(p88, p89, p90)
     local v91 = p89.values.cframes:get("arms"):get_offset("run")
 	if p90 and not settings.ReloadOverride then
 		p88:running_pivots(p89, true)
@@ -6607,8 +6637,11 @@ run_on_actor(getactors()[1], [[
     end)
 
     for i,v in pairs(reload_funcs) do -- might break? i had stack overflow a couple of times with this
-        reload_funcs[i] = hookfunction(reload_funcs[i], function(isDown)
-            local self = getupvalue(reload_funcs[i], 1)
+        reload_funcs[i] = phookfunction(reload_funcs[i], function(isDown)
+            local self = pgetupval(reload_funcs[i], 1)
+            if not self then
+                return
+            end
             local player = self.owner
             local reloadOverride = settings.ReloadOverride
             local canReload = isDown and (player and (not self.reload_thread.running and (not player.values.equip_debounce:get() and (player.values.equipped == self and (
@@ -6633,16 +6666,71 @@ run_on_actor(getactors()[1], [[
     end
 
     local StateObject = require(game.ReplicatedStorage.Modules.StateObject)
+    local op1_state = getgenv().vault_cc_op1 or {}
+    getgenv().vault_cc_op1 = op1_state
+    op1_state.characters = op1_state.characters or setmetatable({}, { __mode = "k" })
+    local hooked_characters = op1_state.characters
+
+    local function is_local_character(character_object)
+        return character_object.owner and character_object.owner.get and character_object.owner:get() == LocalPlayer
+    end
+
+    local function get_equipped_weapon(character_object)
+        local values = character_object and character_object.values
+        local weapon = values and values.equipped
+        if weapon and weapon.reload and weapon.cock then
+            return weapon
+        end
+    end
+
+    local function cancel_equipped_weapon(character_object)
+        if settings.ReloadOverride or not is_local_character(character_object) then
+            return
+        end
+
+        local weapon = get_equipped_weapon(character_object)
+        if weapon then
+            weapon:reload(character_object, false)
+            weapon:cock(character_object, false)
+        end
+    end
+
+    local function hook_character(character_object)
+        if hooked_characters[character_object] then
+            return
+        end
+
+        local states = character_object.states
+        if not (states and states.walk_state and states.vault) then
+            return
+        end
+
+        hooked_characters[character_object] = true
+
+        states.walk_state:hook(function(new_state, old_state)
+            if new_state == "prone" or old_state == "prone" then
+                cancel_equipped_weapon(character_object)
+            end
+        end)
+
+        states.vault:hook(function(vault_state)
+            if vault_state > 0 then
+                cancel_equipped_weapon(character_object)
+            end
+        end)
+    end
+
+    StateObject.hook("Character", hook_character)
 
     local function applyReloadOverride(weaponObject)
         local reloadEvent = weaponObject.states.reload
         if not reloadEvent or not reloadEvent.pause_hooks then return end
 
         for i, func in pairs(reloadEvent.pause_hooks) do
-            local _, upval = debug.getupvalue(func, 1)
+            local ok, _, upval = pcall(debug.getupvalue, func, 1)
             if upval == weaponObject then
                 local cancellingReload = false
-                local old; old = hookfunction(reloadEvent.pause_hooks[i], function(newVal, oldVal)
+                local old; old = phookfunction(reloadEvent.pause_hooks[i], function(newVal, oldVal)
                     if newVal ~= oldVal and not cancellingReload then
                         if weaponObject.owner then
                             local reloadOverride = settings.ReloadOverride
@@ -6684,8 +6772,11 @@ run_on_actor(getactors()[1], [[
         end
     end
 
-    local old_render_running; old_render_running = hookfunction(render_running, function(p406)
-        local v_u_19, v_u_9 = getupvalue(old_render_running, 1), getupvalue(old_render_running, 2)
+    local old_render_running; old_render_running = phookfunction(render_running, function(p406)
+        local v_u_19, v_u_9 = pgetupval(old_render_running, 1), pgetupval(old_render_running, 2)
+        if not (v_u_19 and v_u_19.tightspace and v_u_9 and v_u_9.settings) then
+            return old_render_running(p406)
+        end
 
         local v407 = p406.values.inputs
         local v408 = p406.states.walk_state:get()
@@ -6935,7 +7026,6 @@ run_on_actor(getactors()[1], [[
         FovCircle:Remove()
         for drone in pairs(droneDrawings) do removeDroneDrawings(drone) end
 
-        print('vault.cc | Operation One unloaded <3')
     end)
 
     local MenuGroup = Tabs['UI Settings']:AddLeftGroupbox('Menu')
