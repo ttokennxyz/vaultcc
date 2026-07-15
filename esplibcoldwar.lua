@@ -180,6 +180,7 @@ local ESPConfig = {
     Players = false,
     LocalPlayer = false,
     LimitFPS = 70, -- Set to 0 to disable limit
+    MaxDistance = 0, -- studs; 0 = unlimited. objects farther than this are hidden
     DynamicBoxes = true,
     DynamicBoxesCheap = false,           -- needs DynamicBoxes enabled, only tracks main parts
     DynamicBoxesIncludeAll = false,      -- needs DynamicBoxes enabled, includes every BasePart in the model
@@ -1096,6 +1097,24 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
 
     local _now = tick()
     local humanoid = not nonHuman and instance:FindFirstChild("Humanoid") or nil
+
+    -- Max distance cull: hide everything past the configured range
+    local maxDist = GetCfg("MaxDistance")
+    if maxDist and maxDist > 0 and distanceStuds and distanceStuds > maxDist then
+        espObj.Container.Visible = false
+        if espObj.Highlight then espObj.Highlight:Destroy() espObj.Highlight = nil end
+        if espObj.MeshShell then espObj.MeshShell:Destroy() espObj.MeshShell = nil espObj.MeshHighlight = nil end
+        if espObj.Adornments then for _, a in pairs(espObj.Adornments) do a.Visible = false end end
+        if espObj.ArrowInner then
+            espObj.ArrowInner.Visible = false
+            espObj.ArrowOutline.Visible = false
+            espObj.ArrowName.Visible = false
+            espObj.ArrowDist.Visible = false
+        end
+        if espObj.Bones then for _, b in ipairs(espObj.Bones) do b.Visible = false end end
+        if espObj.BoneOutlines then for _, b in ipairs(espObj.BoneOutlines) do b.Visible = false end end
+        return
+    end
 
     -- Chams logic
     local isDead = (humanoid and humanoid.Health <= 0)
