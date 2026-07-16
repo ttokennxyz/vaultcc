@@ -34,6 +34,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local GuiService = game:GetService("GuiService")
+local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 local RS = game:GetService("ReplicatedStorage")
 local Client = RS.Client
@@ -1318,6 +1319,50 @@ end)
 
 -- settings tab (menu + config)
 local menuGroup = Tabs.Settings:AddLeftGroupbox("Menu")
+
+-- discord invite code (the bit after discord.gg/). swap this for your own
+local DiscordInvite = "YOUR_INVITE"
+
+-- opens an invite straight in the desktop discord client. discord runs a local rpc
+-- server on one of ports 6463-6472; the INVITE_BROWSER command pops the invite. the
+-- Origin header has to look like discord.com or the rpc rejects it
+local function openDiscordInvite(code)
+    local request = http_request or request or (syn and syn.request)
+        or (fluxus and fluxus.request) or (getgenv and getgenv().request)
+    if not request then
+        Library:Notify("No HTTP request function on this executor.")
+        return
+    end
+    local body = HttpService:JSONEncode({
+        cmd = "INVITE_BROWSER",
+        args = { code = code },
+        nonce = HttpService:GenerateGUID(false),
+    })
+    local opened = false
+    for port = 6463, 6472 do
+        local ok, res = pcall(request, {
+            Url = ("http://127.0.0.1:%d/rpc?v=1"):format(port),
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json",
+                ["Origin"] = "https://discord.com",
+            },
+            Body = body,
+        })
+        if ok and res and (res.StatusCode == 200 or res.Success) then
+            opened = true
+            break
+        end
+    end
+    Library:Notify(opened and "Opened the invite in Discord." or "Couldn't reach Discord (is it running?).")
+end
+
+menuGroup:AddButton({
+    Text = "Join Discord",
+    Func = function()
+        openDiscordInvite(DiscordInvite)
+    end,
+})
 menuGroup:AddButton({
     Text = "Unload",
     Func = function()
@@ -1373,4 +1418,4 @@ ThemeManager:ApplyToTab(Tabs.Settings)
 -- load autoload cfg last (fires OnChanged -> applyESP)
 SaveManager:LoadAutoloadConfig()
 
-Library:Notify("Cold War loaded - ESP tab ready.")
+Library:Notify("Cold War loaded <3")
