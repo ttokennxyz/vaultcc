@@ -276,7 +276,7 @@ local ESPConfig = {
         TextSize = 12,
         Color = Color3.fromRGB(255, 255, 255),
         InventoryPath = "ReplicatedStorage.Players.%NAME%.Inventory",
-        UseToolFallback = false,
+        UseToolFallback = true,
     },
 
     -- flags
@@ -1816,19 +1816,20 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
             end
         end
 
-        -- Fallback
+        -- Fallback: the equipped weapon is a Tool under the character
         if (not weaponName or weaponName == "" or weaponName == "nil") and GetCfg("Weapon.UseToolFallback") then
             local tool = instance:FindFirstChildWhichIsA("Tool")
             if tool then weaponName = tool.Name end
         end
 
-        if weaponName and weaponName ~= "" and weaponName ~= "nil" then
-            espObj.WeaponText.Visible = true
-            espObj.WeaponText.Text = weaponName
-            espObj.WeaponText.Position = UDim2.new(0, px - 50, 0, currentBottomY)
-        else
-            espObj.WeaponText.Visible = false
+        -- no tool held -> show "None"
+        if not weaponName or weaponName == "" or weaponName == "nil" then
+            weaponName = "None"
         end
+
+        espObj.WeaponText.Visible = true
+        espObj.WeaponText.Text = weaponName
+        espObj.WeaponText.Position = UDim2.new(0, px - 50, 0, currentBottomY)
     else
         espObj.WeaponText.Visible = false
     end
