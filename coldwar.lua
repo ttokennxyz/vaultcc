@@ -1320,8 +1320,7 @@ end)
 -- settings tab (menu + config)
 local menuGroup = Tabs.Settings:AddLeftGroupbox("Menu")
 
--- discord invite code (the bit after discord.gg/). swap this for your own
-local DiscordInvite = "YOUR_INVITE"
+local DiscordInvite = "Z7tvDkBUxX"
 
 -- opens an invite straight in the desktop discord client. discord runs a local rpc
 -- server on one of ports 6463-6472; the INVITE_BROWSER command pops the invite. the
