@@ -25,6 +25,13 @@ oldStringMatch = hookfunction(string.match, function(...)
     return oldStringMatch(...)
 end)
 
+-- load linoria + addons
+local LinoriaRepo = "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/"
+
+Library = loadstring(game:HttpGet(LinoriaRepo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(LinoriaRepo .. "addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(LinoriaRepo .. "addons/SaveManager.lua"))()
+
 -- services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -43,8 +50,6 @@ local FiremodeController = require(Tools.Weapon.Muzzle.firemodes.FireController)
 local Trajectory = require(RS:WaitForChild("Shared"):WaitForChild("Ballistics"):WaitForChild("Trajectory"))
 local Wielder = require(Client:WaitForChild("Character"):WaitForChild("Wielder"))
 
-local Library -- forward-declared here; assigned when linoria loads (revive notify needs it)
-
 local cfg = {
     Combat = {
         RecoilMult = 0,
@@ -54,7 +59,6 @@ local cfg = {
         RagebotWallbang = false,
         RagebotAutoReload = false,
         RagebotTPAura = false,
-        InstantReload = false,
         SilentTarget = "Head",
         SilentFov = 100,
         SilentFovEnabled = false,
@@ -74,10 +78,11 @@ local cfg = {
         AimbotMethod = "Camera",
         AimbotTarget = "Head",
         ForceAuto = true,
-        InfiniteMags = false,
         InstantEquip = false,
         NoBulletDrop = false,
         InstantBullet = false,
+        RPGPrediction = true,
+        RPGPredictionStrength = 1,
         Snaplines = false,
         SnapTargetColor = Color3.fromRGB(255, 0, 0),
         NoHurtSlowdown = false,
@@ -95,6 +100,33 @@ util.target = nil -- cached target part, refreshed every few frames
 
 local WeaponConfigs
 local isExplosiveShot = false
+local function bulletIsExplosive(bulletConfig)
+    return type(bulletConfig) == "table" and bulletConfig.ExplosionSettings ~= nil
+end
+local function bulletIsRocket(muzzleConfig, bulletConfig)
+    return type(muzzleConfig) == "table"
+        and (muzzleConfig.AmmoTypeName == "Rocket" or bulletIsExplosive(bulletConfig))
+end
+local function predictedProjectilePoint(origin, targetPart, muzzleConfig, bulletConfig)
+    if not (cfg.Combat.RPGPrediction and targetPart and muzzleConfig and bulletConfig) then
+        return targetPart.Position
+    end
+    local velocity = targetPart.AssemblyLinearVelocity or Vector3.zero
+    local speed = bulletConfig.MuzzleVelocity or muzzleConfig.MuzzleVelocity or 0
+    if speed <= 0 then return targetPart.Position end
+
+    local gravity = workspace.Gravity
+    local point = targetPart.Position
+    local travelTime = (point - origin).Magnitude / speed
+    for _ = 1, 3 do
+        point = targetPart.Position + velocity * travelTime
+        local distance = (point - origin).Magnitude
+        travelTime = distance / speed
+    end
+
+    local strength = math.clamp(cfg.Combat.RPGPredictionStrength or 1, 0, 2)
+    return point + Vector3.new(0, gravity * travelTime * travelTime * 0.5 * strength, 0)
+end
 
 -- downed players aren't dead but lie there with CharacterValues.Unconscious set true
 -- (the same value the revive prompt reads). skip them so we don't shoot corpses
@@ -208,7 +240,7 @@ RunService.RenderStepped:Connect(function()
     end
     if not isAimbotActive then return end
 
-    local target = util.getTarget()
+        local target = util.getTarget()
     if not (target and target.Parent) then return end
 
     local camera = workspace.CurrentCamera
@@ -241,6 +273,7 @@ local functions = {}
 functions.getRecoilMult = {func = RecoilController.getRecoilMult, upv = debug.getupvalues(RecoilController.getRecoilMult)}
 functions.spreadVector = {func = nil}
 functions.fire = {func = nil, upv = nil}
+functions.turretFire = {func = nil, upv = nil}
 functions.aimtoggle = {func = AimController.toggle, upv = debug.getupvalues(AimController.toggle)}
 functions.isaimingavailable = {func = AimController.isAimingAvailable, upv = debug.getupvalues(AimController.isAimingAvailable)}
 functions.aimupdate = {func = nil, upv = nil}
@@ -250,6 +283,12 @@ functions.movementupdate = {func = nil}
 functions.healLimb = {func = nil}         -- bandage module: heals a limb (we read its upvalues for the remote)
 functions.reloadContext = {func = nil}    -- reload controller: _context (holds the reload timings)
 functions.muzzlesConfig = {func = nil}    -- weapon config manager: GetAllMuzzlesConfig (fire rate, ammo, penetration)
+
+local function isClientFireModule(value)
+    return type(value) == "table"
+        and type(value.fire) == "function"
+        and type(value.fireVolley) == "function"
+end
 
 for _,v in pairs(gc) do
     if typeof(v) ~= 'function' or (not islclosure(v)) then
@@ -265,6 +304,9 @@ for _,v in pairs(gc) do
     elseif table.find(constants, "config") and string.find(info.source, "Shooter") then
         functions.fire.func = v
         functions.fire.upv = upvalues
+    elseif info.name == "fireOnce" and string.find(info.source, "TurretFireController") then
+        functions.turretFire.func = v
+        functions.turretFire.upv = upvalues
     elseif info.name == 'update' and string.find(info.source, "AimController") then
         functions.aimupdate.func = v
         functions.aimupdate.upv = upvalues
@@ -280,6 +322,61 @@ for _,v in pairs(gc) do
     elseif info.name == 'GetAllMuzzlesConfig' then
         functions.muzzlesConfig.func = v
     end
+end
+
+-- Mounted guns use TurretFireController.fireOnce instead of Shooter.fire. The turret
+-- state is an upvalue that is replaced on every Attach, so resolve it at shot time.
+if functions.turretFire.func then
+    local oldTurretFire = functions.turretFire.func
+    functions.turretFire.func = hookfunction(oldTurretFire, function(...)
+        if not cfg.Combat.SilentEnabled then
+            return oldTurretFire(...)
+        end
+
+        local state, clientFire
+        for _, value in pairs(debug.getupvalues(oldTurretFire)) do
+            if type(value) == "table" then
+                if isClientFireModule(value) then
+                    clientFire = value
+                elseif value.muzzle and value.muzzleConfig and value.weaponName then
+                    state = value
+                end
+            end
+        end
+
+        local target = util.getTarget()
+        if not (state and state.active and state.muzzle and state.muzzle.Parent and clientFire and target) then
+            return oldTurretFire(...)
+        end
+
+        local origin = state.muzzle.WorldPosition
+        local bulletConfig = state.muzzleConfig.BulletSettings
+            and state.muzzleConfig.BulletSettings[1]
+            or {}
+        local targetPoint = target.Position
+        if bulletIsRocket(state.muzzleConfig, bulletConfig) then
+            targetPoint = predictedProjectilePoint(origin, target, state.muzzleConfig, bulletConfig)
+        end
+        local direction = targetPoint - origin
+        if direction.Magnitude <= 0.001 then
+            return oldTurretFire(...)
+        end
+
+        local shotCount = bulletConfig.ShotAmount or 1
+        local spread = bulletConfig.Spread or 1
+        local directions = table.create(shotCount)
+        local baseDirection = direction.Unit
+        for index = 1, shotCount do
+            directions[index] = functions.spreadVector.func(baseDirection, spread)
+        end
+
+        local oldExplosiveState = isExplosiveShot
+        isExplosiveShot = bulletIsExplosive(bulletConfig)
+        local ok, result = pcall(clientFire.fireVolley, state.weaponName, 1, 1, origin, directions)
+        isExplosiveShot = oldExplosiveState
+        if ok then return result end
+        return oldTurretFire(...)
+    end)
 end
 
 -- spread changer
@@ -315,135 +412,102 @@ end
 RecoilController.getRecoilMult = new_getRecoilMult
 
 -- silent aim
-functions.fire.func = hookfunction(functions.fire.func, function(p20, p21)
-    local v_u_3,v_u_7,v_u_11,v_u_8,v_u_4,spreadVector,v_u_6,v_u_5,v_u_10 = unpack(functions.fire.upv)
+functions.fire.func = hookfunction(functions.fire.func, function(p22, p23)
+    local v_u_4,v_u_3,v_u_8,v_u_12,v_u_9,v_u_5,spreadVector,v_u_7,v_u_6,v_u_13,v_u_2,v_u_11 = unpack(functions.fire.upv)
 
-    rbShots = rbShots + 1 -- your own shots drain the mag too; keep the ragebot's count honest
-
-
-  		-- upvalues: (copy) v_u_3, (copy) v_u_7, (copy) v_u_11, (copy) v_u_8, (copy) v_u_4, (copy) spreadVector, (copy) v_u_6, (copy) v_u_5, (copy) v_u_10
-		local v22 = p20.config
-		local v23 = v_u_3:getCharacter()
-		if v23 then
-			v23 = v23:FindFirstChild("Right Arm")
-		end
-		local v24 = (v_u_7.CFrame.Position - v_u_7.Focus.Position).Magnitude <= 0.75 and p20.viewmodelAttachment or p20.attachment
-		local v25 = v24.WorldPosition
-		local v26 = v24.WorldCFrame.LookVector
-		if v23 then
-			local v27 = (v25 - v23.CFrame.Position).Magnitude
-			local v28 = v25 - v26 * v27
-			v_u_11.FilterDescendantsInstances = { v_u_8.Character, workspace.Ignore }
-			local v29 = workspace:Raycast(v28, v26 * v27, v_u_11)
-			if v29 then
-				local v30 = v29.Distance
-				local v31 = math.min(0.01, v30)
-				v25 = v29.Position - v26 * v31
+	-- upvalues: (copy) v_u_4, (copy) v_u_3, (copy) v_u_8, (copy) v_u_12, (copy) v_u_9, (copy) v_u_5, (copy) spreadVector, (copy) v_u_7, (copy) v_u_6, (ref) v_u_13, (copy) v_u_2, (copy) v_u_11
+	-- irreducible control flow represented as a structured state loop
+	local v24 = 30
+	while v24 do
+		if v24 == 30 then
+			if v_u_4.IsPreparation() then
+				return
 			end
-		end
-		local v32 = v22.DefaultAngle or 0
-		local v33 = math.rad(v32)
-		local v34 = v_u_4.zeroAngle() or v33
-		local v35 = (v24.WorldCFrame * CFrame.Angles(v34, 0, 0)).LookVector
-
-		if cfg.Combat.SilentEnabled then
-           	local aimTarget = util.getTarget()
-           	if aimTarget then
-          		v35 = (aimTarget.Position - v25).Unit   -- aim from the muzzle to the part
-           	end
-		end
-
-		p20.animator:play("GunShoot")
-		local v36 = v22.BulletSettings[p21]
-		local v37 = v36.ShotAmount or 1
-		local v38 = v36.Spread or 1
-		local v39 = table.create(v37)
-		for v40 = 1, v37 do
-			v39[#v39 + 1] = spreadVector(v35, v38)
-		end
-		local v41 = p20.tool.Sounds:FindFirstChild("Muzzle" .. p20.index)
-		if v41 then
-			v41 = v41:FindFirstChild("Fire")
-		end
-		if v41 then
-			v_u_6.Play(v41, v24.WorldPosition, v22.SoundRange or 3000)
-		end
-		v_u_5.MuzzleFlash(v24, p20.tool.Name)
-		isExplosiveShot = (function()
-			local wc = WeaponConfigs and WeaponConfigs[p20.tool.Name]
-			if not wc then return false end
-			for _, muzzle in pairs(wc) do
-				if type(muzzle) == "table" and type(muzzle.BulletSettings) == "table" then
-					for _, bs in ipairs(muzzle.BulletSettings) do
-						if type(bs) == "table" and bs.ExplosionSettings then return true end
-					end
+			local v25 = p22.config
+			local v26 = v_u_3:getCharacter()
+			if v26 then
+				v26 = v26:FindFirstChild("Right Arm")
+			end
+			v27 = (v_u_8.CFrame.Position - v_u_8.Focus.Position).Magnitude <= 0.75 and p22.viewmodelAttachment or p22.attachment
+			v28 = v27.WorldPosition
+			local v29 = v27.WorldCFrame.LookVector
+			if v26 then
+				local v30 = (v28 - v26.CFrame.Position).Magnitude
+				local v31 = v28 - v29 * v30
+				v_u_12.FilterDescendantsInstances = { v_u_9.Character, workspace.Ignore }
+				local v32 = workspace:Raycast(v31, v29 * v30, v_u_12)
+				if v32 then
+					local v33 = v32.Distance
+					local v34 = math.min(0.01, v33)
+					v28 = v32.Position - v29 * v34
 				end
 			end
-			return false
-		end)()
-		v_u_10.fireVolley(p20.tool, p20.index, p21, v25, v39)
-		isExplosiveShot = false
-		if not p20:isHandAction() then
-			v_u_5.Casing(v24, p20.tool.Name)
+			local v35 = v25.DefaultAngle or 0
+			local v36 = math.rad(v35)
+			local v37 = v_u_5.zeroAngle() or v36
+			local v38 = (v27.WorldCFrame * CFrame.Angles(v37, 0, 0)).LookVector
+
+			if cfg.Combat.SilentEnabled then
+				local aimTarget = util.getTarget()
+				if aimTarget then
+					local aimPoint = aimTarget.Position
+					if bulletIsRocket(v25, v25.BulletSettings[p23]) then
+						aimPoint = predictedProjectilePoint(v28, aimTarget, v25, v25.BulletSettings[p23])
+					end
+					v38 = (aimPoint - v28).Unit   -- aim from the muzzle to the part
+				end
+			end
+
+			local v39 = v25.BulletSettings[p23]
+			rbShots = rbShots + 1 -- your own shots drain the mag too; keep the ragebot's count honest
+
+			p22.animator:play("GunShoot")
+			--local v39 = v25.BulletSettings[p23]
+			local v40 = v39.ShotAmount or 1
+			local v41 = v39.Spread or 1
+			v42 = table.create(v40)
+			for v43 = 1, v40 do
+				v42[#v42 + 1] = spreadVector(v38, v41)
+			end
+			local v44 = p22.tool.Sounds:FindFirstChild("Muzzle" .. p22.index)
+			if v44 then
+				v44 = v44:FindFirstChild("Fire")
+			end
+			if v44 then
+				v_u_7.Play(v44, v27.WorldPosition, v25.SoundRange or 3000)
+			end
+			v_u_6.MuzzleFlash(v27, p22.tool.Name)
+			isExplosiveShot = bulletIsExplosive(v39)
+			if v_u_13 == nil then
+				v24 = 23
+			else
+				v24 = 24
+			end
+		elseif v24 == 24 then
+			v_u_13.flushNow()
+			v24 = 27
+		elseif v24 == 27 then
+			v_u_11.fireVolley(p22.tool, p22.index, p23, v28, v42)
+			isExplosiveShot = false
+			if not p22:isHandAction() then
+				v_u_6.Casing(v27, p22.tool.Name)
+			end
+			v24 = nil
+			return
+		elseif v24 == 23 then
+			v45 = v_u_2.Client:FindFirstChild("BodyReplication")
+			if v45 then
+				v24 = 26
+			else
+				v24 = 27
+			end
+		elseif v24 == 26 then
+			v_u_13 = require(v45)
+			v24 = 24
+		else
+			v24 = nil
 		end
-
-
-    --[[
-    local v22 = p20.config
-	local v23 = v_u_3:getCharacter()
-	if v23 then
-		v23 = v23:FindFirstChild("Right Arm")
 	end
-	local v24 = (v_u_7.CFrame.Position - v_u_7.Focus.Position).Magnitude <= 0.75
-	local v25 = v24 and p20.viewmodelAttachment or p20.attachment
-	local v26 = v25.WorldPosition
-	local v27 = v25.WorldCFrame.LookVector
-	if v23 then
-		local v28 = (v26 - v23.CFrame.Position).Magnitude
-		local v29 = v26 - v27 * v28
-		v_u_11.FilterDescendantsInstances = { v_u_8.Character, workspace.Ignore }
-		local v30 = workspace:Raycast(v29, v27 * v28, v_u_11)
-		if v30 then
-			local v31 = v30.Distance
-			local v32 = math.min(0.01, v31)
-			v26 = v30.Position - v27 * v32
-		end
-	end
-	local v33 = v22.DefaultAngle or 0
-	local v34 = math.rad(v33)
-	local v35 = v_u_4.zeroAngle() or v34
-	local v36 = (v25.WorldCFrame * CFrame.Angles(v35, 0, 0)).LookVector
-
-	-- redirect toward the aimbot target
-	if cfg.Combat.SilentEnabled then
-    	local aimTarget = util.getTarget()
-    	if aimTarget then
-    		v36 = (aimTarget.Position - v26).Unit   -- aim from the muzzle to the part
-    	end
-	end
-
-	p20.animator:play("GunShoot")
-	local v37 = v22.BulletSettings[p21]
-	local v38 = v37.ShotAmount or 1
-	local v39 = v37.Spread or 1
-	local v40 = table.create(v38)
-	for v41 = 1, v38 do
-		v40[#v40 + 1] = spreadVector(v36, v39)
-	end
-	local v42 = p20.tool.Sounds:FindFirstChild("Muzzle" .. p20.index)
-	if v42 then
-		v42 = v42:FindFirstChild("Fire")
-	end
-	if v42 then
-		v_u_6.Play(v42, v25.WorldPosition, v22.SoundRange or 3000)
-	end
-	local v43 = v24 and p20.viewmodelTool or p20.tool
-	v_u_5.replicateRecoil(v_u_8, v43, p20.index)
-	v_u_5.muzzleFlash(v43, p20.index)
-	v_u_10.fireVolley(p20.tool, p20.index, p21, v26, v40)
-	if not p20:isHandAction() then
-		v_u_5.casing(v43, p20.index)
-	end--]]
 end)
 -- aiming shi
 functions.aimtoggle.func = hookfunction(functions.aimtoggle.func, function(...)
@@ -573,35 +637,7 @@ Trajectory.new = function(params)
     return oldTrajNew(params)
 end
 
--- infinite magazines
--- the user places an ammo crate manually; we just refill from workspace.Ignore.AmmoBox
 local Remotes = RS:WaitForChild("Remotes")
-local GetAmmo = Remotes:WaitForChild("GetAmmo")
-
--- refill every weapon we own so nothing runs dry: the equipped tool (in the character)
--- plus everything sitting in the backpack. throttled a touch since it fires per tool
-local magsAcc = 0
-local magsConn = RunService.Heartbeat:Connect(function(dt)
-    if not cfg.Combat.InfiniteMags then return end
-    magsAcc = magsAcc + dt
-    if magsAcc < 0.25 then return end
-    magsAcc = 0
-    local ignore = workspace:FindFirstChild("Ignore")
-    local box = ignore and ignore:FindFirstChild("AmmoBox")
-    if not box then return end
-    local char = LocalPlayer.Character
-    if char then
-        for _, t in ipairs(char:GetChildren()) do
-            if t:IsA("Tool") then GetAmmo:FireServer(t, box, 1, 1) end
-        end
-    end
-    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-    if backpack then
-        for _, t in ipairs(backpack:GetChildren()) do
-            if t:IsA("Tool") then GetAmmo:FireServer(t, box, 1, 1) end
-        end
-    end
-end)
 
 
 -- auto heal: fire the game's HealLimb remote for each damaged limb directly. healLimb
@@ -652,103 +688,205 @@ local reviveConn = RunService.Heartbeat:Connect(function(dt)
     end
 end)
 
--- car mods: overwrite the vehicle Transmission config on any matching gc table (a car
--- config carries Transmission + Damage + ShopInfo). reapplied on a slow timer so newly
--- spawned/entered cars get modded without a per-frame getgc scan
-local carTransmission = {
-	ChassisType = "Wheeled",
-
-	Wheels = {
-		{ Name = "FrontLeft", Steer = 1, Drive = true },
-		{ Name = "FrontRight", Steer = 1, Drive = true },
-		{ Name = "RearLeft", Steer = 0, Drive = true },
-		{ Name = "RearRight", Steer = 0, Drive = true }
-	},
-
-	DriveType = "AWD",
-	Differential = "Locked",
-
-	-- Acceleration
-	FinalDrive = 7.50,
-
-	Ratios = {
-		[-1] = 7.497,
-		[0] = 0,
-		4.50,
-		2.80,
-		1.80,
-		1.20
-	},
-
-	AutoShift = true,
-	ShiftRPM = 7000,
-
-	-- Engine
-	IdleRPM = 1000,
-	IdleTorque = 140,
-	IdleTorqueCurve = 0.15,
-
-	PeakTorque = 520,
-	PeakTorqueRPM = 5000,
-
-	RedlineRPM = 9000,
-	RedlineTorque = 300,
-	RedlineTorqueCurve = 0.5,
-
-	HorsepowerLimit = 1000,
-	TorqueScale = 6,
-
-	TopSpeed = 220,
-
-	-- Traction
-	PeakGrip = 2.5,
-	SlideGrip = 2.25,
-	PeakSlip = 0.5,
-	Grip = 40,
-
-	-- Brakes
-	BrakeMultiplier = 10,
-	HandBrakeMultiplier = 5.5,
-	RollingFriction = 0.05,
-
-	-- Burnout resistance
-	BurnoutSyncingFactor = 1,
-	BurnoutDesyncAmplifier = 0,
-	BurnoutSyncAbruptness = 10,
-
-	-- Handling
-	DriftGrip = 100,
-	DriftReduction = 0.95,
-
-	TurningZForceMultiplier = 1,
-
-	-- Slower / smoother steering
-	TurnRadius = 20,
-	SteerSpeed = 2.5,
-	HighSpeedSteerReduction = 0.65,
-
-	ForceHeight = 0.75,
-	Ackermann = true,
-
-	-- Weight
-	Mass = 750,
-	WheelMass = 8,
-
-	-- Keep chassis/suspension geometry stable
-	SuspensionHeight = 2,
-	RideHeight = 1.5,
-	WheelOffset = 0.5,
-
-	ReboundDampingModifier = 1.3,
-	CompressionDampingModifier = 1.0,
-	DamperActiveness = 0.7
+-- Vehicle profiles are keyed by the discovered ShopInfo name and faction.
+local carDefaults = {
+    FinalDrive = 7.5, ShiftRPM = 7000, IdleRPM = 1000, IdleTorque = 140,
+    PeakTorque = 520, PeakTorqueRPM = 5000, RedlineRPM = 9000, RedlineTorque = 300,
+    HorsepowerLimit = 1000, TorqueScale = 6, TopSpeed = 220, PeakGrip = 2.5,
+    SlideGrip = 2.25, PeakSlip = 0.5, Grip = 40, BrakeMultiplier = 10,
+    HandBrakeMultiplier = 5.5, RollingFriction = 0.05, TurningZForceMultiplier = 1,
+    TurnRadius = 20, SteerSpeed = 2.5, HighSpeedSteerReduction = 0.65,
+    ForceHeight = 0.75, Mass = 750, WheelMass = 8, SuspensionHeight = 2,
+    RideHeight = 1.5, WheelOffset = 0.5, ReboundDampingModifier = 1.3,
+    CompressionDampingModifier = 1, DamperActiveness = 0.7,
 }
-local function applyCarMods()
-    for _, v in pairs(getgc(true)) do
-        if typeof(v) == 'table' and rawget(v, "Transmission") and rawget(v, "Damage") and rawget(v, "ShopInfo") then
-            v.Transmission = carTransmission
+local carBoolDefaults = { AutoShift = true, Ackermann = true }
+local carChoiceDefaults = {
+    ChassisType = "Wheeled",
+    DriveType = "AWD",
+    Differential = "Locked",
+}
+local carProfiles = {}
+local carEntries = {}
+local carConfigs = {}
+local carProfileJson = "{}"
+local carConfigSeen = {}
+local carProfileSyncing = false
+local carEntrySignature = ""
+local function carText(info)
+    local name = info.Name or info.DisplayName or info.VehicleName or info.Id or "Unknown Car"
+    local team = info.Team or info.Faction or info.Side or "PACT"
+    team = tostring(team):upper():find("NATO") and "NATO" or "PACT"
+    return tostring(name) .. " (" .. team .. ")"
+end
+local function carLabelFromInstance(instance)
+    local faction
+    local factionNode = instance.Parent
+    while factionNode and factionNode ~= RS do
+        local upper = factionNode.Name:upper()
+        if upper == "PACT" or upper == "NATO" then
+            faction = upper
+            break
+        end
+        factionNode = factionNode.Parent
+    end
+    if not faction then return nil end
+    return instance.Name .. " (" .. faction .. ")"
+end
+local function copyProfile(source)
+    local result = {}
+    if type(source) == "table" then
+        for key, value in pairs(source) do
+            if type(value) ~= "table" then result[key] = value end
+        end
+        if type(source.Ratios) == "table" then
+            result.Ratios = {}
+            for key, value in pairs(source.Ratios) do result.Ratios[key] = value end
+        end
+        if type(source.Wheels) == "table" then
+            result.Wheels = {}
+            for index, wheel in ipairs(source.Wheels) do
+                result.Wheels[index] = {}
+                for key, value in pairs(wheel) do result.Wheels[index][key] = value end
+            end
         end
     end
+    for key, value in pairs(carDefaults) do result[key] = source and source[key] ~= nil and source[key] or value end
+    for key, value in pairs(carBoolDefaults) do result[key] = source and source[key] ~= nil and source[key] or value end
+    for key, value in pairs(carChoiceDefaults) do result[key] = source and source[key] ~= nil and source[key] or value end
+    return result
+end
+local function syncCarProfileJson()
+    carProfileJson = HttpService:JSONEncode(carProfiles)
+    if Options.carsprofiles and Options.carsprofiles.Value ~= carProfileJson and not carProfileSyncing then
+        carProfileSyncing = true
+        Options.carsprofiles:SetValue(carProfileJson)
+        carProfileSyncing = false
+    end
+end
+local function loadCarProfileJson(value)
+    if carProfileSyncing then return end
+    if type(value) ~= "string" or value == "" then return end
+    local ok, decoded = pcall(HttpService.JSONDecode, HttpService, value)
+    if ok and type(decoded) == "table" then
+        for label, profile in pairs(decoded) do
+            if type(profile) == "table" then carProfiles[label] = copyProfile(profile) end
+        end
+    end
+end
+local function registerCar(label, value)
+    if not label or type(value) ~= "table" or type(value.Transmission) ~= "table" then return end
+    if carConfigSeen[value] then return end
+    carConfigSeen[value] = true
+    carConfigs[label] = value
+    carEntries[#carEntries + 1] = label
+    if carProfiles[label] == nil then
+        carProfiles[label] = copyProfile(value.Transmission)
+    end
+end
+local function discoverCars()
+    local manager = RS:FindFirstChild("Shared")
+        and RS.Shared:FindFirstChild("VehicleConfigManager")
+    if manager then
+        for _, instance in ipairs(manager:GetDescendants()) do
+            if instance:IsA("ModuleScript") then
+                local label = carLabelFromInstance(instance)
+                if label then
+                    local ok, value = pcall(require, instance)
+                    if ok and type(value) == "table" and rawget(value, "Transmission") then
+                        for key, field in pairs(value.Transmission) do
+                            if type(field) == "number" and carDefaults[key] == nil then
+                                carDefaults[key] = field
+                            elseif type(field) == "boolean" and carBoolDefaults[key] == nil then
+                                carBoolDefaults[key] = field
+                            elseif type(field) == "string" and carChoiceDefaults[key] == nil then
+                                carChoiceDefaults[key] = field
+                            end
+                        end
+                        registerCar(label, value)
+                    end
+                end
+            end
+        end
+    end
+
+    -- Fallback for configs held only in closures/upvalues rather than ModuleScripts.
+    if not manager then
+      for _, value in pairs(getgc(true)) do
+        if typeof(value) == "table" and rawget(value, "Transmission") and rawget(value, "Damage") and rawget(value, "ShopInfo") then
+            local info = value.ShopInfo
+            if type(info) == "table" then
+                local label = carText(info)
+                for key, field in pairs(value.Transmission) do
+                    if type(field) == "number" and carDefaults[key] == nil then
+                        carDefaults[key] = field
+                    elseif type(field) == "boolean" and carBoolDefaults[key] == nil then
+                        carBoolDefaults[key] = field
+                    elseif type(field) == "string" and carChoiceDefaults[key] == nil then
+                        carChoiceDefaults[key] = field
+                    end
+                end
+                registerCar(label, value)
+            end
+        end
+      end
+    end
+    table.sort(carEntries)
+    local signature = table.concat(carEntries, "\0")
+    if Options.carprofile and signature ~= carEntrySignature then
+        carEntrySignature = signature
+        Options.carprofile:SetValues(carEntries)
+    end
+end
+discoverCars()
+local selectedCar = carEntries[1]
+local function applyCarMods()
+    if not cfg.Combat.CarMods then return end
+    for label, value in pairs(carConfigs) do
+        local profile = carProfiles[label]
+        if profile then
+            local transmission = value.Transmission
+            for key in pairs(carDefaults) do
+                if transmission[key] ~= profile[key] then transmission[key] = profile[key] end
+            end
+            for key in pairs(carBoolDefaults) do
+                if transmission[key] ~= profile[key] then transmission[key] = profile[key] end
+            end
+            for key in pairs(carChoiceDefaults) do
+                if transmission[key] ~= profile[key] then transmission[key] = profile[key] end
+            end
+            if profile.Ratios then
+                transmission.Ratios = transmission.Ratios or {}
+                for gear, ratio in pairs(profile.Ratios) do
+                    if transmission.Ratios[gear] ~= ratio then transmission.Ratios[gear] = ratio end
+                end
+            end
+            if profile.Wheels then
+                transmission.Wheels = transmission.Wheels or {}
+                for index, wheel in ipairs(profile.Wheels) do
+                    transmission.Wheels[index] = transmission.Wheels[index] or {}
+                    for key, value in pairs(wheel) do
+                        if transmission.Wheels[index][key] ~= value then
+                            transmission.Wheels[index][key] = value
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+local function selectedCarProfile()
+    if not selectedCar then return nil end
+    carProfiles[selectedCar] = carProfiles[selectedCar] or copyProfile()
+    return carProfiles[selectedCar]
+end
+local function setCarControlValue(key, value)
+    local profile = selectedCarProfile()
+    if not profile then return end
+    profile[key] = value
+    syncCarProfileJson()
+    applyCarMods()
 end
 local carModsAcc = 0
 local carModsConn = RunService.Heartbeat:Connect(function(dt)
@@ -756,30 +894,25 @@ local carModsConn = RunService.Heartbeat:Connect(function(dt)
     carModsAcc = carModsAcc + dt
     if carModsAcc < 5 then return end
     carModsAcc = 0
+    discoverCars()
     applyCarMods()
 end)
-
-
-
--- instant reload: the reload timings live in the context table _context builds. shrink
--- them so the reload lockout is effectively gone
-if functions.reloadContext.func then
-    functions.reloadContext.func = hookfunction(functions.reloadContext.func, function(...)
-        rbShots = 0 -- a reload (manual or otherwise) refills the mag, so reset the count
-        local ctx = functions.reloadContext.func(...)
-        if cfg.Combat.InstantReload and type(ctx) == "table" then
-            ctx.reloadTime = 0.05
-            ctx.insertTime = 0.05
-        end
-        return ctx
-    end)
-end
 
 -- ragebot: independent auto-fire, fully separate from silent aim. it fires straight
 -- through the client fire module (downstream of the silent aim hook) at any enemy it can
 -- actually damage: clear line of sight, or a penetrable wall when wallbang is on.
 -- runs in its own thread with a paced while-loop instead of per-frame render/heartbeat
-local ClientFire = functions.fire.upv and functions.fire.upv[9] -- the module with fireVolley/fire
+local function findClientFire(upvalues)
+    for _, value in pairs(upvalues or {}) do
+        if type(value) == "table"
+            and type(value.fire) == "function"
+            and type(value.fireVolley) == "function" then
+            return value
+        end
+    end
+    return upvalues and upvalues[12]
+end
+local ClientFire = findClientFire(functions.fire.upv) -- the module with fireVolley/fire
 local WeaponRemote = Remotes:WaitForChild("Weapon")             -- reload requests go here
 -- the config manager keeps every weapon config keyed by tool name; grab that table off
 -- GetAllMuzzlesConfig so we get real fire rate / ammo / penetration instead of guessing
@@ -863,8 +996,10 @@ local rbPartOrder = { "Head", "Torso", "HumanoidRootPart", "Left Arm", "Right Ar
 local function rbBestPart(targetChar, origin, budget, ignore)
     for _, name in ipairs(rbPartOrder) do
         local part = targetChar:FindFirstChild(name)
-        if part and part:IsA("BasePart") and rbCanDamage(origin, part.Position, targetChar, budget, ignore) then
-            return part
+        if part and part:IsA("BasePart") then
+            if rbCanDamage(origin, part.Position, targetChar, budget, ignore) then
+                return part, origin
+            end
         end
     end
     return nil
@@ -907,19 +1042,22 @@ local function ragebotStep()
     if magSize > 0 and rbShots >= magSize then
         if cfg.Combat.RagebotAutoReload then
             rbReloadServer(muzzleIndex, bulletIndex)
-            rbReloadUntil = os.clock() + (cfg.Combat.InstantReload and 0.1 or reloadTime)
+            rbReloadUntil = os.clock() + reloadTime
             rbShots = 0
         end
         return
     end
 
+    -- Do not spend rays finding an origin until the weapon can actually fire.
+    if os.clock() < rbNextFire then return end
+
     local ignore = { char }
     local ig = workspace:FindFirstChild("Ignore")
     if ig then ignore[#ignore + 1] = ig end
 
-    -- nearest enemy that has any hittable part; aim at their highest-priority part
+    -- Check nearest enemies first so a valid target stops all further origin scans.
     local me = LocalPlayer
-    local best, bestDist
+    local candidates = {}
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= me and plr.Character and not isDowned(plr.Character) then -- skip downed
             if not (me.Team and plr.Team == me.Team) then -- never teammates
@@ -928,30 +1066,28 @@ local function ragebotStep()
                     or plr.Character:FindFirstChild("Head")
                 if hum and hum.Health > 0 and ref then
                     local dist = (ref.Position - origin).Magnitude
-                    if not bestDist or dist < bestDist then
-                        local part = rbBestPart(plr.Character, origin, budget, ignore)
-                        if part then best, bestDist = part, dist end
-                    end
+                    candidates[#candidates + 1] = { Character = plr.Character, Distance = dist }
                 end
             end
         end
     end
 
-    if best and os.clock() >= rbNextFire then
+    table.sort(candidates, function(a, b) return a.Distance < b.Distance end)
+    local best, shotOrigin
+    for _, candidate in ipairs(candidates) do
+        best, shotOrigin = rbBestPart(candidate.Character, origin, budget, ignore)
+        if best then break end
+    end
+
+    if best then
         rbNextFire = os.clock() + 60 / firerate -- respect the weapon's real fire rate
-        local dir = (best.Position - origin).Unit
-        isExplosiveShot = (function()
-            local wc = WeaponConfigs and WeaponConfigs[tool.Name]
-            if not wc then return false end
-            for _, muzzle in pairs(wc) do
-                if type(muzzle) == "table" and type(muzzle.BulletSettings) == "table" then
-                    for _, bs in ipairs(muzzle.BulletSettings) do
-                        if type(bs) == "table" and bs.ExplosionSettings then return true end
-                    end
-                end
-            end
-            return false
-        end)()
+        origin = shotOrigin or origin
+        local targetPoint = best.Position
+        if bulletIsRocket(mc, bs) then
+            targetPoint = predictedProjectilePoint(origin, best, mc, bs)
+        end
+        local dir = (targetPoint - origin).Unit
+        isExplosiveShot = bulletIsExplosive(bs)
         pcall(function()
             ClientFire.fire(tool, muzzleIndex, bulletIndex, origin, dir, {})
         end)
@@ -1052,12 +1188,7 @@ end)
 
 
 
--- load linoria + addons
-local LinoriaRepo = "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/"
 
-Library = loadstring(game:HttpGet(LinoriaRepo .. "Library.lua"))()
-local ThemeManager = loadstring(game:HttpGet(LinoriaRepo .. "addons/ThemeManager.lua"))()
-local SaveManager = loadstring(game:HttpGet(LinoriaRepo .. "addons/SaveManager.lua"))()
 
 -- window + tabs
 local Window = Library:CreateWindow({
@@ -1223,17 +1354,9 @@ gunmods:AddToggle("forceauto", { Text = "Force Auto", Default = true})
 Toggles['forceauto']:OnChanged(function(val)
     cfg.Combat.ForceAuto = val
 end)
-gunmods:AddToggle("infinitemags", { Text = "Infinite Magazines", Default = false, Tooltip = "Requires an ammo crate to be placed somewhere on the map" })
-Toggles['infinitemags']:OnChanged(function(val) -- infinite mags
-    cfg.Combat.InfiniteMags = val
-end)
 gunmods:AddToggle("instantequip", { Text = "Instant Equip", Default = false, Tooltip = "Equip weapons instantly" })
 Toggles['instantequip']:OnChanged(function(val) -- instant equip
     cfg.Combat.InstantEquip = val
-end)
-gunmods:AddToggle("instantreload", { Text = "Instant Reload", Default = false, Tooltip = "Reload instantly" })
-Toggles['instantreload']:OnChanged(function(val) -- instant reload
-    cfg.Combat.InstantReload = val
 end)
 gunmods:AddToggle("nodrop", { Text = "No Bullet Drop", Default = false, Tooltip = "Bullets ignore gravity" })
 Toggles['nodrop']:OnChanged(function(val) -- no bullet drop
@@ -1242,6 +1365,14 @@ end)
 gunmods:AddToggle("instantbullet", { Text = "Instant Bullet", Default = false, Tooltip = "Bullets travel instantly" })
 Toggles['instantbullet']:OnChanged(function(val) -- instant bullet
     cfg.Combat.InstantBullet = val
+end)
+gunmods:AddToggle("rpgprediction", { Text = "RPG Prediction", Default = true, Tooltip = "Lead rocket and explosive projectile shots using target velocity" })
+Toggles['rpgprediction']:OnChanged(function(val)
+    cfg.Combat.RPGPrediction = val
+end)
+gunmods:AddSlider("rpgpredictionstrength", { Text = "RPG Prediction Strength", Default = 1, Min = 0, Max = 2, Rounding = 2 })
+Options['rpgpredictionstrength']:OnChanged(function(val)
+    cfg.Combat.RPGPredictionStrength = val
 end)
 
 --right: aiming
@@ -1547,11 +1678,20 @@ miscHeal:AddToggle("instantheal", { Text = "Instant Heal", Default = false, Tool
 Toggles['instantheal']:OnChanged(function(val) -- instant heal
     cfg.Combat.InstantHeal = val
 end)
+-- below here
+local originalHealSpeed = functions.healLimb.upv[7]
+local modifiedHealSpeed = {}
 
 local miscBandage = Tabs.Misc:AddRightGroupbox("Bandage")
 miscBandage:AddToggle("nobandageslowdown", { Text = "No Bandage Slowdown", Default = false, Tooltip = "Stay at full speed while bandaging" })
 Toggles['nobandageslowdown']:OnChanged(function(val) -- no bandage slowdown
     cfg.Combat.NoBandageSlowdown = val
+
+    if val then
+        debug.setupvalue(functions.healLimb.func, 7, modifiedHealSpeed)
+    else
+        debug.setupvalue(functions.healLimb.func, 7, originalHealSpeed)
+    end
 end)
 
 local miscRevive = Tabs.Misc:AddRightGroupbox("Revive")
@@ -1564,8 +1704,117 @@ local miscVehicle = Tabs.Misc:AddRightGroupbox("Vehicles")
 miscVehicle:AddToggle("carmods", { Text = "Car Mods", Default = false, Tooltip = "More speed, torque and handling" })
 Toggles['carmods']:OnChanged(function(val) -- car mods
     cfg.Combat.CarMods = val
-    if val then applyCarMods() end
+    applyCarMods()
 end)
+miscVehicle:AddDropdown("carprofile", { Text = "Car", Values = carEntries, Default = 1, Multi = false, AllowNull = true })
+Options.carprofile:OnChanged(function(value)
+    selectedCar = value
+    local profile = selectedCarProfile()
+    if not profile then return end
+    for key in pairs(carDefaults) do
+        if Options["car_" .. key] then Options["car_" .. key]:SetValue(profile[key]) end
+    end
+    for key in pairs(carBoolDefaults) do
+        if Toggles["car_" .. key] then Toggles["car_" .. key]:SetValue(profile[key]) end
+    end
+    for key, values in pairs({ ChassisType = { "Wheeled", "Tracked" }, DriveType = { "FWD", "RWD", "AWD" }, Differential = { "Open", "Locked" } }) do
+        if Options["car_" .. key] then Options["car_" .. key]:SetValue(profile[key]) end
+    end
+    for index = -1, 6 do
+        local ratio = profile.Ratios and profile.Ratios[index] or 0
+        if Options["car_ratio_" .. tostring(index)] then
+            Options["car_ratio_" .. tostring(index)]:SetValue(ratio)
+        end
+    end
+    for index = 1, 4 do
+        local wheel = profile.Wheels and profile.Wheels[index]
+        if Toggles["car_wheel_" .. index .. "_drive"] then
+            Toggles["car_wheel_" .. index .. "_drive"]:SetValue(wheel and wheel.Drive == true or true)
+        end
+        if Toggles["car_wheel_" .. index .. "_steer"] then
+            Toggles["car_wheel_" .. index .. "_steer"]:SetValue(wheel and wheel.Steer == 1 or index <= 2)
+        end
+    end
+    syncCarProfileJson()
+    applyCarMods()
+end)
+miscVehicle:AddLabel("Saved profiles are stored per car and faction")
+
+local carSliderInfo = {
+    { "FinalDrive", "Final Drive", 0, 20, 2 }, { "ShiftRPM", "Shift RPM", 1000, 15000, 0 },
+    { "IdleRPM", "Idle RPM", 0, 5000, 0 }, { "IdleTorque", "Idle Torque", 0, 2000, 0 },
+    { "PeakTorque", "Peak Torque", 0, 3000, 0 }, { "PeakTorqueRPM", "Peak Torque RPM", 0, 15000, 0 },
+    { "RedlineRPM", "Redline RPM", 1000, 20000, 0 }, { "RedlineTorque", "Redline Torque", 0, 3000, 0 },
+    { "HorsepowerLimit", "Horsepower Limit", 0, 3000, 0 }, { "TorqueScale", "Torque Scale", 0, 20, 2 },
+    { "TopSpeed", "Top Speed", 0, 500, 0 }, { "PeakGrip", "Peak Grip", 0, 10, 2 },
+    { "SlideGrip", "Slide Grip", 0, 10, 2 }, { "PeakSlip", "Peak Slip", 0, 5, 2 },
+    { "Grip", "Grip", 0, 200, 1 }, { "BrakeMultiplier", "Brake Multiplier", 0, 50, 2 },
+    { "HandBrakeMultiplier", "Handbrake Multiplier", 0, 50, 2 }, { "RollingFriction", "Rolling Friction", 0, 2, 2 },
+    { "TurningZForceMultiplier", "Turning Z Force", 0, 10, 2 }, { "TurnRadius", "Turn Radius", 0, 100, 1 },
+    { "SteerSpeed", "Steer Speed", 0, 20, 2 }, { "HighSpeedSteerReduction", "High Speed Steering", 0, 1, 2 },
+    { "ForceHeight", "Force Height", -5, 5, 2 }, { "Mass", "Mass", 0, 5000, 0 },
+    { "WheelMass", "Wheel Mass", 0, 100, 1 }, { "SuspensionHeight", "Suspension Height", 0, 10, 2 },
+    { "RideHeight", "Ride Height", -5, 10, 2 }, { "WheelOffset", "Wheel Offset", -5, 5, 2 },
+    { "ReboundDampingModifier", "Rebound Damping", 0, 10, 2 },
+    { "CompressionDampingModifier", "Compression Damping", 0, 10, 2 },
+    { "DamperActiveness", "Damper Activeness", 0, 2, 2 },
+}
+for index, label in ipairs({ "Reverse", "Neutral", "Gear 1", "Gear 2", "Gear 3", "Gear 4", "Gear 5", "Gear 6" }) do
+    local key = index - 2
+    local control = "car_ratio_" .. tostring(key)
+    miscVehicle:AddSlider(control, { Text = label .. " Ratio", Default = 0, Min = -15, Max = 15, Rounding = 3 })
+    Options[control]:OnChanged(function(value)
+        local profile = selectedCarProfile()
+        if not profile then return end
+        profile.Ratios = profile.Ratios or {}
+        profile.Ratios[key] = value
+        syncCarProfileJson()
+        applyCarMods()
+    end)
+end
+for index, label in ipairs({ "Front Left", "Front Right", "Rear Left", "Rear Right" }) do
+    local prefix = "car_wheel_" .. index .. "_"
+    miscVehicle:AddToggle(prefix .. "drive", { Text = label .. " Drive", Default = true })
+    miscVehicle:AddToggle(prefix .. "steer", { Text = label .. " Steer", Default = index <= 2 })
+    Toggles[prefix .. "drive"]:OnChanged(function(value)
+        local profile = selectedCarProfile()
+        if not profile then return end
+        profile.Wheels = profile.Wheels or {}
+        profile.Wheels[index] = profile.Wheels[index] or { Name = label:gsub(" ", ""), Drive = true, Steer = index <= 2 and 1 or 0 }
+        profile.Wheels[index].Drive = value
+        syncCarProfileJson()
+        applyCarMods()
+    end)
+    Toggles[prefix .. "steer"]:OnChanged(function(value)
+        local profile = selectedCarProfile()
+        if not profile then return end
+        profile.Wheels = profile.Wheels or {}
+        profile.Wheels[index] = profile.Wheels[index] or { Name = label:gsub(" ", ""), Drive = true, Steer = index <= 2 and 1 or 0 }
+        profile.Wheels[index].Steer = value and 1 or 0
+        syncCarProfileJson()
+        applyCarMods()
+    end)
+end
+for _, info in ipairs(carSliderInfo) do
+    local key, text, min, max, rounding = table.unpack(info)
+    miscVehicle:AddSlider("car_" .. key, { Text = text, Default = carDefaults[key], Min = min, Max = max, Rounding = rounding })
+    Options["car_" .. key]:OnChanged(function(value) setCarControlValue(key, value) end)
+end
+for key, default in pairs(carBoolDefaults) do
+    miscVehicle:AddToggle("car_" .. key, { Text = key, Default = default })
+    Toggles["car_" .. key]:OnChanged(function(value) setCarControlValue(key, value) end)
+end
+for key, values in pairs({ ChassisType = { "Wheeled", "Tracked" }, DriveType = { "FWD", "RWD", "AWD" }, Differential = { "Open", "Locked" } }) do
+    miscVehicle:AddDropdown("car_" .. key, { Text = key, Values = values, Default = carChoiceDefaults[key], Multi = false })
+    Options["car_" .. key]:OnChanged(function(value) setCarControlValue(key, value) end)
+end
+miscVehicle:AddInput("carsprofiles", { Text = "Profile data", Default = "{}" })
+Options.carsprofiles:OnChanged(function(value)
+    loadCarProfileJson(value)
+    syncCarProfileJson()
+    applyCarMods()
+end)
+if selectedCar then Options.carprofile:SetValue(selectedCar) end
 
 -- settings tab (menu + config)
 local menuGroup = Tabs.Settings:AddLeftGroupbox("Menu")
@@ -1619,6 +1868,11 @@ menuGroup:AddButton({
     end,
 })
 menuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", { Default = "RightShift", NoUI = true, Text = "Menu keybind" })
+menuGroup:AddToggle("ShowKeybindList", { Text = "Show Keybind List", Default = true, Tooltip = "Shows the active keybind list overlay" }):OnChanged(function(val)
+    if Library and Library.KeybindFrame then
+        Library.KeybindFrame.Visible = val
+    end
+end)
 
 -- menu open/close key
 Library.ToggleKeybind = Options.MenuKeybind
@@ -1631,7 +1885,6 @@ Library:OnUnload(function()
     end
     pcall(function() RunService:UnbindFromRenderStep("cwfov") end)
     pcall(function() RunService:UnbindFromRenderStep("cwsnap") end)
-    if magsConn then magsConn:Disconnect() magsConn = nil end
     if bandageConn then bandageConn:Disconnect() bandageConn = nil end
     if healConn then healConn:Disconnect() healConn = nil end
     if reviveConn then reviveConn:Disconnect() reviveConn = nil end
@@ -1666,5 +1919,9 @@ ThemeManager:ApplyToTab(Tabs.Settings)
 
 -- load autoload cfg last (fires OnChanged -> applyESP)
 SaveManager:LoadAutoloadConfig()
+
+if Library and Library.KeybindFrame then
+    Library.KeybindFrame.Visible = true
+end
 
 Library:Notify("Cold War loaded, made with love by vaultt. <3")
