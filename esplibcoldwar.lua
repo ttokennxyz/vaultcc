@@ -13,9 +13,9 @@ if not LPH_OBFUSCATED then
     LPH_JIT_MAX = LPH_JIT_MAX or function(...)
         return ...
     end
-    LPH_NO_VIRTUALIZE = LPH_NO_VIRTUALIZE or function(...)
-        return ...
-    end
+    LPH_ATTRIBUTES = LPH_ATTRIBUTES or function(...) end
+    VM = VM or function(...) return ... end
+    NONE = NONE or "NONE"
     LPH_NO_UPVALUES = LPH_NO_UPVALUES or function(f)
         return function(...)
             return f(...)
@@ -49,7 +49,6 @@ local Camera = Workspace.CurrentCamera
 local WtS = Camera.WorldToViewportPoint
 local UIContainer = gethui and gethui() or CoreGui
 local BootstrapPlayers = Players
-local LPHNoVirtualize = LPH_NO_VIRTUALIZE
 local ESP = {}
 local ChamsContainer
 local MeshChamsFolder
@@ -157,7 +156,8 @@ local function EnsureRootInstances()
 end
 
 local labelStrokeMap = setmetatable({}, { __mode = "k" })
-local DrawLine = LPHNoVirtualize(function(line, p1, p2, thickness, color)
+local DrawLine = function(line, p1, p2, thickness, color)
+    LPH_ATTRIBUTES(VM(NONE))
     local diff = p2 - p1
     local dist = diff.Magnitude
     local angle = math.deg(math.atan2(diff.Y, diff.X))
@@ -804,7 +804,8 @@ local function CreateLine(parent)
     return line, outline
 end
 
-local CreateESPObj = LPHNoVirtualize(function(name)
+local CreateESPObj = function(name)
+    LPH_ATTRIBUTES(VM(NONE))
     local espObj = {
         Visible = false,
         Lines = {},
@@ -1061,9 +1062,10 @@ local function GetHealthValues(instance, humanoid, source, partName)
     return 100, 100
 end
 
-local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, distanceStuds, instance, isCheap, nonHuman,
-                                              noStatus,
-                                              configOverride, onScreen)
+local UpdateESPObj = function(espObj, position, size, name, distanceStuds, instance, isCheap, nonHuman,
+                                               noStatus,
+                                               configOverride, onScreen)
+    LPH_ATTRIBUTES(VM(NONE))
     local cfgCache = {}
     local function GetCfg(path)
         local cached = cfgCache[path]
@@ -2069,7 +2071,8 @@ end)
 --
 
 --// logic
-local Get2DBoundingBox = LPHNoVirtualize(function(instance)
+local Get2DBoundingBox = function(instance)
+    LPH_ATTRIBUTES(VM(NONE))
     local rootPart
     if instance:IsA("Model") then
         rootPart = instance:FindFirstChild("HumanoidRootPart") or instance:FindFirstChild("Torso") or
@@ -2230,7 +2233,8 @@ local function CheckBlockNames(inst, blockList)
     return false
 end
 
-local ScanDirectories = LPHNoVirtualize(function()
+local ScanDirectories = function()
+    LPH_ATTRIBUTES(VM(NONE))
     local newTracked = {}
 
     if ESPConfig.Players then
