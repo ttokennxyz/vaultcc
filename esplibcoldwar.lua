@@ -168,7 +168,7 @@ local DrawLine = function(line, p1, p2, thickness, color)
     line.Rotation = angle
     line.BackgroundColor3 = color
     line.Visible = true
-end)
+end
 
 local ESPConfig = {
     -- esp checks
