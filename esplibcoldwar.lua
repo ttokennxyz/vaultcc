@@ -1022,7 +1022,7 @@ local CreateESPObj = function(name)
     end
 
     return espObj
-end)
+end
 
 -- read a part's Health value + MaxHealth attribute (games that store hp per-part
 -- instead of on the humanoid). returns current, max or nil.
@@ -2067,7 +2067,7 @@ local UpdateESPObj = function(espObj, position, size, name, distanceStuds, insta
             for _, b in ipairs(espObj.BoneOutlines) do b.Visible = false end
         end
     end
-end)
+end
 --
 
 --// logic
@@ -2188,7 +2188,7 @@ local Get2DBoundingBox = function(instance)
         end
         return true, Vector2.new((minX + maxX) / 2, (minY + maxY) / 2), Vector2.new(maxX - minX, maxY - minY)
     end
-end)
+end
 --
 
 --// custom functions logic
@@ -2347,7 +2347,7 @@ local ScanDirectories = function()
             TrackedInstances[inst] = nil
         end
     end
-end)
+end
 
 local lastScan = 0
 local lastRender = 0
