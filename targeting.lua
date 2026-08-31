@@ -472,12 +472,12 @@ function Targeting_Object:getClosestPlayerToCenter(PlayerTable, PartList, MaxRan
 		if self:is_friendly(player) then
 			continue
 		end
-
+		--[[
 		if table.find(Entities.whitelist, self:getName(player)) then
 			--print("skipped whitelist entry")
 			continue
 		end
-
+		--]]
 		local Char = self:get_character(player)
 
 		if not Char then
@@ -574,12 +574,12 @@ function Targeting_Object:getClosestPlayerToMouse(PlayerTable, PartList, MaxRang
 		if self:is_friendly(player) then
 			continue
 		end
-
+		--[[
 		if table.find(Entities.whitelist, self:getName(player)) then
 			--print("skipped whitelist entry")
 			continue
 		end
-
+		--]]
 		local Char = self:get_character(player)
 
 		if not Char then
