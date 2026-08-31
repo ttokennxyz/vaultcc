@@ -149,15 +149,37 @@ Targeting_Object.__index = Targeting_Object
 if game.GameId == 1054526971 then -- Blackhawk
 	local ClientService
 	local ReplicatorService
-	local moduleTable = getgenv().Modules or {}
-	ClientService = moduleTable.ClientService
-	ReplicatorService = moduleTable.ReplicatorService
-	pcall(function()
-		ClientService = ClientService or require("ClientService")
-	end)
-	pcall(function()
-		ReplicatorService = ReplicatorService or require("ReplicatorService")
-	end)
+
+	for _,v in getgc(false) do
+	    if typeof(v) ~= 'function' then
+			continue
+		end
+
+		local info = debug.getinfo(v)
+		local name = info.name or ""
+		local line = info.currentline or ""
+		local source = info.source or ""
+
+		if name == "_sendInvites" and source:find("ActionInterface") then
+		    local upv = debug.getupvalues(v)
+			if typeof(upv[1]) ~= 'table' then
+				game.Players.LocalPlayer:Kick("err_1 : ClientService upvalue was not a table, script requires update. Please report to dev")
+				return
+			end
+
+			ClientService = upv[1]
+		elseif name == "DoEmote" and source:find("ActionInterface") then
+		    local upv = debug.getupvalues(v)
+			if typeof(upv[1]) ~= 'table' then
+				game.Players.LocalPlayer:Kick("err_2 : ReplicatorService upvalue was not a table, script requires update. Please report to dev")
+				return
+			end
+
+			ReplicatorService = upv[1]
+		end
+
+		if ClientService and ReplicatorService then break end
+	end
 
 	local function get_client(entry)
 		if not entry then
@@ -175,6 +197,7 @@ if game.GameId == 1054526971 then -- Blackhawk
 
 	local function get_actor(entry)
 		local client = get_client(entry)
+		print(client)
 		if client and client.Actor then
 			return client.Actor
 		end
@@ -208,6 +231,7 @@ if game.GameId == 1054526971 then -- Blackhawk
 
 	function Targeting_Object:get_character(player)
 		local actor = get_actor(player)
+
 		if actor and actor.Character then
 			return actor.Character
 		end
@@ -661,6 +685,3 @@ function Targeting_Object:getClosestPlayerToMouse(PlayerTable, PartList, MaxRang
 	--table.foreach(TargetData,print)
 	return TargetData
 end
-
---getgenv().Modules.Targeting = Targeting_Object
-return Targeting_Object
