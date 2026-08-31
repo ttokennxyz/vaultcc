@@ -662,5 +662,5 @@ function Targeting_Object:getClosestPlayerToMouse(PlayerTable, PartList, MaxRang
 	return TargetData
 end
 
-getgenv().Modules.Targeting = Targeting_Object
+--getgenv().Modules.Targeting = Targeting_Object
 return Targeting_Object
