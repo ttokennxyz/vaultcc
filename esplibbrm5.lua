@@ -60,10 +60,29 @@ local CurrentRunId = HttpService:GenerateGUID(false)
 -- Blackhawk keeps rendered characters on custom Actor objects rather than
 -- Player.Character. The services are supplied by the game's module loader.
 local BlackhawkReplicator
-pcall(function()
-    local modules = getgenv().Modules or {}
-    BlackhawkReplicator = modules.ReplicatorService or require("ReplicatorService")
-end)
+
+for _,v in getgc(false) do
+    if typeof(v) ~= 'function' then
+		continue
+	end
+
+	local info = debug.getinfo(v)
+	local name = info.name or ""
+	local line = info.currentline or ""
+	local source = info.source or ""
+
+	if name == "DoEmote" and source:find("ActionInterface") then
+	    local upv = debug.getupvalues(v)
+		if typeof(upv[1]) ~= 'table' then
+			game.Players.LocalPlayer:Kick("err_2 : ReplicatorService upvalue was not a table, script requires update. Please report to dev")
+			return
+		end
+
+		BlackhawkReplicator = upv[1]
+	end
+
+	if BlackhawkReplicator then break end
+end
 
 if getgenv().SensoryESP_Unload then
     pcall(getgenv().SensoryESP_Unload)
