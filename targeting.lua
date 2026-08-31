@@ -83,8 +83,8 @@ if not LPH_OBFUSCATED then
 	end
 end
 
-local Directories = getgenv().Modules.Directories
-local Entities = getgenv().Modules.Entities
+--local Directories = getgenv().Modules.Directories
+--local Entities = getgenv().Modules.Entities
 
 --// Modules
 
@@ -570,7 +570,7 @@ function Targeting_Object:getClosestPlayerToMouse(PlayerTable, PartList, MaxRang
 		if player == Client then
 			continue
 		end
-		
+
 		if self:is_friendly(player) then
 			continue
 		end
