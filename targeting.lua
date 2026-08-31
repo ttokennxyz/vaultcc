@@ -685,3 +685,6 @@ function Targeting_Object:getClosestPlayerToMouse(PlayerTable, PartList, MaxRang
 	--table.foreach(TargetData,print)
 	return TargetData
 end
+
+--getgenv().Modules.Targeting = Targeting_Object
+return Targeting_Object
