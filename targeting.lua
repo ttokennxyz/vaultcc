@@ -84,7 +84,6 @@ if not LPH_OBFUSCATED then
 end
 
 local Directories = getgenv().Modules.Directories
-local RayModule = getgenv().Modules.RayCasting
 local Entities = getgenv().Modules.Entities
 
 --// Modules
@@ -111,6 +110,34 @@ local Utility = {}
 local Requests = {}
 local Debris = cloneref(game:GetService("Debris"))
 local screenCenter = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+
+local function IsPartVisible(origin, targetPart)
+	if not origin or not targetPart or not targetPart:IsA("BasePart") then
+		return false
+	end
+
+	local direction = targetPart.Position - origin
+	if direction.Magnitude <= 0 then
+		return true
+	end
+
+	local raycastParams = RaycastParams.new()
+	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+	raycastParams.IgnoreWater = true
+	raycastParams.FilterDescendantsInstances = {
+		Client.Character,
+		Camera,
+	}
+
+	local result = Workspace:Raycast(origin, direction, raycastParams)
+	if not result then
+		return true
+	end
+
+	local hit = result.Instance
+	local targetModel = targetPart:FindFirstAncestorOfClass("Model")
+	return hit == targetPart or (targetModel and hit:IsDescendantOf(targetModel)) == true
+end
 
 local RunService = game:GetService("RunService")
 local core_gui = game:GetService("CoreGui")
@@ -508,7 +535,7 @@ function Targeting_Object:getClosestPlayerToCenter(PlayerTable, PartList, MaxRan
 			continue
 		end
 
-		local isVisible = RayModule:IsPartVisible(Camera.CFrame.p, part)
+		local isVisible = IsPartVisible(Camera.CFrame.Position, part)
 
 		-- Main logic here after compleitng all the checks to validate any targets left in the table
 
@@ -610,7 +637,7 @@ function Targeting_Object:getClosestPlayerToMouse(PlayerTable, PartList, MaxRang
 			continue
 		end
 
-		local isVisible = RayModule:IsPartVisible(Camera.CFrame.p, part)
+		local isVisible = IsPartVisible(Camera.CFrame.Position, part)
 
 		-- Main logic here after compleitng all the checks to validate any targets left in the table
 
