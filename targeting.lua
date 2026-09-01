@@ -85,6 +85,7 @@ end
 
 --local Directories = getgenv().Modules.Directories
 --local Entities = getgenv().Modules.Entities
+local Entities = { whitelist = {} }
 
 --// Modules
 
@@ -197,7 +198,6 @@ if game.GameId == 1054526971 then -- Blackhawk
 
 	local function get_actor(entry)
 		local client = get_client(entry)
-		print(client)
 		if client and client.Actor then
 			return client.Actor
 		end
@@ -211,6 +211,10 @@ if game.GameId == 1054526971 then -- Blackhawk
 			return ReplicatorService:GetFromPlayer(entry)
 		end
 		return nil
+	end
+
+	function Targeting_Object:get_local_client()
+	    return ClientService.LocalClient
 	end
 
 	function Targeting_Object:get_client(entry)
@@ -486,7 +490,7 @@ end
 function Targeting_Object:getClosestPlayerToCenter(PlayerTable, PartList, MaxRange, MaxScreenPoint, MinScreenPoint) -- PartList
 	local TargetData = {}
 	local smallest = math.huge
-	local smallest2 = math.huge
+	MaxRange = (MaxRange and MaxRange > 0) and MaxRange or math.huge
 
 	for i, player in pairs(PlayerTable) do
 		if player == Client then
@@ -536,6 +540,7 @@ function Targeting_Object:getClosestPlayerToCenter(PlayerTable, PartList, MaxRan
 
 		local screendistance = (Vector2.new(screenPoint.X, screenPoint.Y) - screenCenter).Magnitude
 		local part
+		local smallest2 = math.huge
 
 		if #PartList == 0 then
 			part = self:getPart(Char, "Head")
@@ -587,7 +592,7 @@ end
 function Targeting_Object:getClosestPlayerToMouse(PlayerTable, PartList, MaxRange, MaxScreenPoint, MinScreenPoint) -- PartList
 	local TargetData = {}
 	local smallest = math.huge
-	local smallest2 = math.huge
+	MaxRange = (MaxRange and MaxRange > 0) and MaxRange or math.huge
 	local screenCenter = UserInputService:GetMouseLocation()
 
 	for i, player in pairs(PlayerTable) do
@@ -638,6 +643,7 @@ function Targeting_Object:getClosestPlayerToMouse(PlayerTable, PartList, MaxRang
 
 		local screendistance = (Vector2.new(screenPoint.X, screenPoint.Y) - screenCenter).Magnitude
 		local part
+		local smallest2 = math.huge
 
 		if #PartList == 0 then
 			part = self:getPart(Char, "Head")
