@@ -2292,21 +2292,23 @@ local ScanDirectories = function()
         end
     end
 
-    if BlackhawkReplicator and BlackhawkReplicator.GetActors then
-        for _, actor in pairs(BlackhawkReplicator:GetActors()) do
-            local character = actor.Character
-            if character and character.Parent and character:IsA("Model") then
-                local humanoid = character:FindFirstChildOfClass("Humanoid")
-                if humanoid and humanoid.Health > 0 then
-                    local owner = actor.Owner
-                    if not ESPConfig.Filter or ESPConfig.Filter(character, owner) then
-                        newTracked[character] = {
-                            name = (owner and owner.Name) or actor.OwnerName or character.Name,
-                            Cheap = false,
-                            NonHuman = false,
-                            NoStatus = false,
-                            Config = {}
-                        }
+    if ClientService and ClientService.GetClients then
+        for _, client in pairs(ClientService:GetClients()) do
+            local actor = client.Actor
+            if actor then
+                local character = actor.Character
+                if character and character.Parent and character:IsA("Model") then
+                    if actor and actor.Health > 0 then
+                        local owner = actor.Owner
+                        if not ESPConfig.Filter or ESPConfig.Filter(character, owner, client) then
+                            newTracked[character] = {
+                                name = (owner and owner.Name) or actor.OwnerName or character.Name,
+                                Cheap = false,
+                                NonHuman = false,
+                                NoStatus = false,
+                                Config = {}
+                            }
+                        end
                     end
                 end
             end
