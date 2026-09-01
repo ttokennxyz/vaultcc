@@ -1075,7 +1075,7 @@ local function ReadPartHealth(part)
 end
 
 -- resolve (health, maxHealth) for a character based on the HealthBar.Source mode
-local function GetHealthValues(instance, humanoid, source, partName)
+local function GetHealthValues(instance, humanoid, source, partName, actor)
     if source == "Average" then
         local total, totalMax, n = 0, 0, 0
         for _, p in ipairs(instance:GetChildren()) do
@@ -1095,15 +1095,15 @@ local function GetHealthValues(instance, humanoid, source, partName)
     end
 
     -- fallback: humanoid
-    if humanoid then
-        return humanoid.Health, humanoid.MaxHealth
+    if actor then
+        return actor.Health, 100
     end
     return 100, 100
 end
 
 local UpdateESPObj = function(espObj, position, size, name, distanceStuds, instance, isCheap, nonHuman,
                                                noStatus,
-                                               configOverride, onScreen)
+                                               configOverride, onScreen, actor)
     LPH_ATTRIBUTES(VM(NONE))
     local cfgCache = {}
     local function GetCfg(path)
@@ -1158,7 +1158,7 @@ local UpdateESPObj = function(espObj, position, size, name, distanceStuds, insta
     end
 
     -- Chams logic
-    local isDead = (humanoid and humanoid.Health <= 0)
+    local isDead = actor.Alive == false
     local chamsEnabled = GetCfg("Chams.Enabled")
     if chamsEnabled and not isDead then
         local chamType = GetCfg("Chams.Type")
@@ -1603,7 +1603,7 @@ local UpdateESPObj = function(espObj, position, size, name, distanceStuds, insta
     local health, maxHealth, healthPercent = 100, 100, 1
     local hbSource = GetCfg("HealthBar.Source")
     if hbSource and hbSource ~= "Humanoid" then
-        health, maxHealth = GetHealthValues(instance, humanoid, hbSource, GetCfg("HealthBar.Part"))
+        health, maxHealth = GetHealthValues(instance, humanoid, hbSource, GetCfg("HealthBar.Part"), actor)
         healthPercent = math.clamp(health / (maxHealth > 0 and maxHealth or 1), 0, 1)
     elseif humanoid then
         health = humanoid.Health
@@ -2280,6 +2280,7 @@ local ScanDirectories = function()
     LPH_ATTRIBUTES(VM(NONE))
     local newTracked = {}
 
+    --[[
     if ESPConfig.Players then
         for _, player in ipairs(Players:GetPlayers()) do
             if not ESPConfig.LocalPlayer and player == LocalPlayer then continue end
@@ -2291,6 +2292,7 @@ local ScanDirectories = function()
             end
         end
     end
+    --]]
 
     if ClientService and ClientService.GetClients then
         for _, client in pairs(ClientService:GetClients()) do
@@ -2306,6 +2308,7 @@ local ScanDirectories = function()
                                 Cheap = false,
                                 NonHuman = false,
                                 NoStatus = false,
+                                Actor = actor,
                                 Config = {}
                             }
                         end
@@ -2396,6 +2399,7 @@ local ScanDirectories = function()
                 Cheap = data.Cheap,
                 NonHuman = data.NonHuman,
                 NoStatus = data.NoStatus,
+                Actor = data.Actor,
                 Config = data.Config
             }
         else
@@ -2426,7 +2430,7 @@ local function RuntimeStep()
                 disabledConfig.Chams = disabledConfig.Chams or {}
                 disabledConfig.Chams.Enabled = false
                 UpdateESPObj(data.espObj, nil, nil, "", 0, inst, data.Cheap, data.NonHuman, data.NoStatus, disabledConfig,
-                    false)
+                    false, data.Actor)
             end
         end
         return
@@ -2471,10 +2475,10 @@ local function RuntimeStep()
             local onscreen, pos2d, size2d = Get2DBoundingBox(inst)
             local distanceStuds = (Camera.CFrame.Position - rootPart.Position).Magnitude
             UpdateESPObj(data.espObj, pos2d, size2d, data.name, distanceStuds, inst, data.Cheap, data.NonHuman,
-                data.NoStatus, data.Config, onscreen)
+                data.NoStatus, data.Config, onscreen, data.Actor)
         else
             UpdateESPObj(data.espObj, nil, nil, data.name, 0, inst, data.Cheap, data.NonHuman, data.NoStatus, data
-                .Config, false)
+                .Config, false, data.Actor)
         end
     end
 end
