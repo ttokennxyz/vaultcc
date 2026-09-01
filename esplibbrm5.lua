@@ -1849,15 +1849,21 @@ local UpdateESPObj = function(espObj, position, size, name, distanceStuds, insta
     if GetCfg("Weapon.Enabled") then
         local weaponName = nil
 
-        -- Simple 'Holding' check
-        local holding = instance:FindFirstChild("Holding")
-        if holding then
-            if holding:IsA("ValueBase") then
-                if holding.Value then
-                    weaponName = tostring(holding.Value)
+        -- main gun check
+        local inventory = actor and actor._inventory
+        local equipped = actor and actor._equipped
+        if inventory and equipped then
+            local item = inventory[equipped]
+            if item then
+                local lodModel = item._lodModel
+                if lodModel then
+                    weaponName = tostring(lodModel)
+                else
+                    local heroModel = item._heroModel
+                    if heroModel then
+                        weaponName = tostring(heroModel)
+                    end
                 end
-            else
-                weaponName = holding.Name
             end
         end
 
