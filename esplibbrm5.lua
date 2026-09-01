@@ -1605,9 +1605,9 @@ local UpdateESPObj = function(espObj, position, size, name, distanceStuds, insta
     if hbSource and hbSource ~= "Humanoid" then
         health, maxHealth = GetHealthValues(instance, humanoid, hbSource, GetCfg("HealthBar.Part"), actor)
         healthPercent = math.clamp(health / (maxHealth > 0 and maxHealth or 1), 0, 1)
-    elseif humanoid then
-        health = humanoid.Health
-        maxHealth = humanoid.MaxHealth
+    elseif actor then
+        health = actor.Health
+        maxHealth = 100
         healthPercent = math.clamp(health / maxHealth, 0, 1)
     end
 
