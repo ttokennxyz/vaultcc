@@ -60,6 +60,7 @@ local CurrentRunId = HttpService:GenerateGUID(false)
 -- Blackhawk keeps rendered characters on custom Actor objects rather than
 -- Player.Character. The services are supplied by the game's module loader.
 local BlackhawkReplicator
+local ClientService
 
 for _,v in getgc(false) do
     if typeof(v) ~= 'function' then
@@ -71,7 +72,15 @@ for _,v in getgc(false) do
 	local line = info.currentline or ""
 	local source = info.source or ""
 
-	if name == "DoEmote" and source:find("ActionInterface") then
+	if name == "_sendInvites" and source:find("ActionInterface") then
+	    local upv = debug.getupvalues(v)
+		if typeof(upv[1]) ~= 'table' then
+			game.Players.LocalPlayer:Kick("err_1 : ClientService upvalue was not a table, script requires update. Please report to dev")
+			return
+		end
+
+		ClientService = upv[1]
+	elseif name == "DoEmote" and source:find("ActionInterface") then
 	    local upv = debug.getupvalues(v)
 		if typeof(upv[1]) ~= 'table' then
 			game.Players.LocalPlayer:Kick("err_2 : ReplicatorService upvalue was not a table, script requires update. Please report to dev")
@@ -81,8 +90,10 @@ for _,v in getgc(false) do
 		BlackhawkReplicator = upv[1]
 	end
 
-	if BlackhawkReplicator then break end
+	if ClientService and BlackhawkReplicator then break end
 end
+
+local LocalClient = ClientService.LocalClient
 
 if getgenv().SensoryESP_Unload then
     pcall(getgenv().SensoryESP_Unload)
@@ -212,6 +223,7 @@ local ESPConfig = {
     DynamicBoxesCheap = false,           -- needs DynamicBoxes enabled, only tracks main parts
     DynamicBoxesIncludeAll = false,      -- needs DynamicBoxes enabled, includes every BasePart in the model
     VisibilityCheckRate = 0.3,
+    Filter = nil, -- optional function(instance, owner) returning whether the entry should be drawn
 
     -- boxes
     Boxes = false,
@@ -1756,22 +1768,26 @@ local UpdateESPObj = function(espObj, position, size, name, distanceStuds, insta
     local leftTags = {}
     local rightTags = {}
 
-    if GetCfg("TeamIndicator.Enabled") and teamOwner and teamOwner.Team then
-        local teamColor = GetCfg("TeamIndicator.UseTeamColor") and teamOwner.TeamColor.Color or
-        GetCfg("TeamIndicator.Color")
-        local teamName = teamOwner.Team.Name
-        local compactTeam = GetCfg("TeamIndicator.Compact") and CompactTeamName(teamName) or teamName
-        local teamTag = string.format('<font color="%s">[%s]</font>', ColorToHex(teamColor), compactTeam)
-        if GetCfg("TeamIndicator.Position") == "Left" then
-            table.insert(leftTags, teamTag)
-        else
-            table.insert(rightTags, teamTag)
+    if GetCfg("TeamIndicator.Enabled") and teamOwner then
+        teamOwner = ClientService.Clients[teamOwner] or ClientService:GetClientFromPlayer(teamOwner)
+        if teamOwner.Squad then
+            local teamColor = GetCfg("TeamIndicator.UseTeamColor") and BrickColor.new(tostring(teamOwner.Squad)).Color or
+            GetCfg("TeamIndicator.Color")
+            local teamName = teamOwner.Squad
+            local compactTeam = GetCfg("TeamIndicator.Compact") and CompactTeamName(teamName) or teamName
+            local teamTag = string.format('<font color="%s">[%s]</font>', ColorToHex(teamColor), compactTeam)
+            if GetCfg("TeamIndicator.Position") == "Left" then
+                table.insert(leftTags, teamTag)
+            else
+                table.insert(rightTags, teamTag)
+            end
         end
     end
 
     local isFriendly = false
     if teamOwner and GetCfg("FriendlyIndicator.Enabled") then
-        if GetCfg("FriendlyIndicator.CheckTeam") and LocalPlayer.Team ~= nil and teamOwner.Team == LocalPlayer.Team then
+        local teamOwnerClient = ClientService.Clients[teamOwner] or ClientService:GetClientFromPlayer(teamOwner)
+        if GetCfg("FriendlyIndicator.CheckTeam") and LocalClient.Squad ~= nil and teamOwnerClient.Squad == LocalClient.Squad then
             isFriendly = true
         end
         if not isFriendly and GetCfg("FriendlyIndicator.CheckFriends") then
@@ -2269,7 +2285,7 @@ local ScanDirectories = function()
             if not ESPConfig.LocalPlayer and player == LocalPlayer then continue end
             if player.Character then
                 local humanoid = player.Character:FindFirstChild("Humanoid")
-                if humanoid and humanoid.Health > 0 then
+                if humanoid and humanoid.Health > 0 and (not ESPConfig.Filter or ESPConfig.Filter(player.Character, player)) then
                     newTracked[player.Character] = { name = player.Name, Cheap = false }
                 end
             end
@@ -2283,13 +2299,15 @@ local ScanDirectories = function()
                 local humanoid = character:FindFirstChildOfClass("Humanoid")
                 if humanoid and humanoid.Health > 0 then
                     local owner = actor.Owner
-                    newTracked[character] = {
-                        name = (owner and owner.Name) or actor.OwnerName or character.Name,
-                        Cheap = false,
-                        NonHuman = false,
-                        NoStatus = false,
-                        Config = {}
-                    }
+                    if not ESPConfig.Filter or ESPConfig.Filter(character, owner) then
+                        newTracked[character] = {
+                            name = (owner and owner.Name) or actor.OwnerName or character.Name,
+                            Cheap = false,
+                            NonHuman = false,
+                            NoStatus = false,
+                            Config = {}
+                        }
+                    end
                 end
             end
         end
