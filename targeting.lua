@@ -86,6 +86,7 @@ end
 --local Directories = getgenv().Modules.Directories
 --local Entities = getgenv().Modules.Entities
 local Entities = { whitelist = {} }
+getgenv().Modules = {}
 
 --// Modules
 
@@ -359,7 +360,6 @@ if game.GameId == 1054526971 then -- Blackhawk
 		local owner = self:get_owner(entry)
 		return (owner and owner.Name) or entry.OwnerName or entry.Name or entry.UID
 	end
-
 elseif game.GameId == 113491250 then -- PHANTOM FORCES
 	function Targeting_Object:get_character(entry)
 		if not entry then
@@ -430,6 +430,100 @@ elseif game.GameId == 7633926880 then -- BS
 			part = "UpperTorso"
 		end
 		return game.FindFirstChild(character, part)
+	end
+
+	function Targeting_Object:getName(entry)
+		if not entry then
+			return
+		end
+
+		return tostring(entry.Name)
+	end
+elseif game.GameId == 8307114974 then -- op1
+    local refresh_cooldown = 5 -- 5 seconds
+
+    local StateObject = require(game.ReplicatedStorage.Modules.StateObject)
+
+    local characters = StateObject.get_all("Character")
+
+    task.spawn(function()
+        while task.wait(refresh_cooldown) do
+            characters = StateObject.get_all("Character")
+        end
+    end)
+
+	function Targeting_Object:get_character(player)
+		--print("called",player)
+		if typeof(player) == "Instance" and player.Name then
+			for i,v in characters do
+			    if i.Name == player.Name then
+					return v, v.instance
+				end
+			end
+		end
+		return nil
+	end
+
+	function Targeting_Object:get_viewmodel(player)
+		--print("called",player)
+		if typeof(player) == "Instance" then
+		    local char = Targeting_Object:get_character(player)
+			if char and char.values then
+			    return char.values.viewmodels or nil
+			end
+			return nil
+		end
+		return nil
+	end
+
+	function Targeting_Object:get_weapon(player)
+		--print("called",player)
+		if typeof(player) == "Instance" then
+		    local char = Targeting_Object:get_character(player)
+			if char and char.values then
+			    return char.values.weapon or nil
+			end
+			return nil
+		end
+		return nil
+	end
+
+	function Targeting_Object:get_weapon_name(player)
+		--print("called",player)
+		if typeof(player) == "Instance" then
+		    local char = Targeting_Object:get_character(player)
+			if char and char.values and char.values.weapon then
+			    return char.values.weapon.name or "None"
+			end
+			return "None"
+		end
+		return "None"
+	end
+
+	function Targeting_Object:is_friendly(player)
+		return player:GetAttribute("Team") and player:GetAttribute("Team") == Client:GetAttribute("Team")
+	end
+
+	function Targeting_Object:get_health(player)
+        if typeof(player) == "Instance" then
+            local char = Targeting_Object:get_character(player)
+           	if char and char.instance and game.FindFirstChild(char.instance, "Humanoid") then -- potential optimization? unsure if findfirstchild is necessary
+                local Humanoid = char.instance.Humanoid
+                return Humanoid.Health, Humanoid.MaxHealth
+           	end
+           	return "None"
+        end
+		return 100, 100
+	end
+
+	function Targeting_Object:getPart(viewmodel, part)
+	    part = part:lower()
+
+		if part == "root" or part == "humanoidrootpart" then
+			part = "torso"
+		end
+
+		return game.FindFirstChild(viewmodel, part)
 	end
 
 	function Targeting_Object:getName(entry)
@@ -692,5 +786,5 @@ function Targeting_Object:getClosestPlayerToMouse(PlayerTable, PartList, MaxRang
 	return TargetData
 end
 
---getgenv().Modules.Targeting = Targeting_Object
+getgenv().Modules.Targeting = Targeting_Object
 return Targeting_Object
