@@ -1249,7 +1249,7 @@ local UpdateESPObj = function(espObj, position, size, name, distanceStuds, insta
 
                     CleanupCharacterMeshChams(instance)
 
-                    local bodyParts    = isR15 and r15Parts or r6Parts
+                    local bodyParts    = {"head", "torso", "leg1", "leg2", "arm1", "arm2", "hip1", "hip2", "shoulder1", "shoulder2"}
 
                     local shellModel   = Instance.new("Model")
                     shellModel.Name    = "ChamShells"
@@ -2267,7 +2267,7 @@ local ScanDirectories = function()
         print("[ESP] Player:", player.Name)
         print("[ESP]   Character:", character, "| Parent:", character and character.Parent)
         print("[ESP]   Viewmodel:", viewmodel, "| Parent:", viewmodel and viewmodel.Parent)
-        print("[ESP]   State:", state, "| State.viewmodel:", state and state.viewmodel and state.viewmodel.value)
+        print("[ESP]   State:", state, "| State.viewmodel:", state and state.values and state.values.viewmodel)
 
         local target = viewmodel or character
         if target and target.Parent then
