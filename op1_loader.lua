@@ -38,7 +38,7 @@ local function enableFflag()
 end
 
 local function inLobby()
-	local PlayerGui = .Players.LocalPlayer:FindFirstChild("PlayerGui")
+	local PlayerGui = Players.LocalPlayer:FindFirstChild("PlayerGui")
 	local left = PlayerGui.LoadoutMenu.Left
 	local center = left.Center
     local crate = left.Bottom.CrateFrame
