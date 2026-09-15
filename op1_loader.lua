@@ -38,14 +38,14 @@ local function enableFflag()
 end
 
 local function inLobby()
-	local ok, Loadout = pcall(function()
-		return require(game.ReplicatedStorage.Modules.Loadout)
-	end)
-	if ok and Loadout and Loadout.main_menu and Loadout.main_menu.get then
-		return Loadout.main_menu:get() == true
-	end
-	local playerGui = Players.LocalPlayer:FindFirstChild("PlayerGui")
-	return playerGui ~= nil and playerGui:FindFirstChild("LoadoutMenu") ~= nil
+	local PlayerGui = .Players.LocalPlayer:FindFirstChild("PlayerGui")
+	local left = PlayerGui.LoadoutMenu.Left
+	local center = left.Center
+    local crate = left.Bottom.CrateFrame
+    local loadouts = center.Loadouts
+    local mainmenu = center.MainMenu
+    local play = center.PlayFrame
+	return crate.Visible or loadouts.Visible or mainmenu.Visible or play.Visible
 end
 
 local lobby = inLobby()
@@ -53,7 +53,6 @@ if lobby then
 	enableFflag()
 end
 local canLoad = lobby or fflagEnabled()
-
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "vaultcc"
