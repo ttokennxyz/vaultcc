@@ -2,7 +2,7 @@
 	sensory esp
 	authors: dacces, Gemini, OpenAI, Claude, Deepseek
 
-	inspired by: 
+	inspired by:
 	https://v3rm.net/threads/chatgpt-esp-by-me.28629/#post-242437
 ]]
 
@@ -13,9 +13,9 @@ if not LPH_OBFUSCATED then
     LPH_JIT_MAX = LPH_JIT_MAX or function(...)
         return ...
     end
-    LPH_NO_VIRTUALIZE = LPH_NO_VIRTUALIZE or function(...)
-        return ...
-    end
+    LPH_ATTRIBUTES = LPH_ATTRIBUTES or function(...) end
+    VM = VM or function(...) return ... end
+    NONE = NONE or "NONE"
     LPH_NO_UPVALUES = LPH_NO_UPVALUES or function(f)
         return function(...)
             return f(...)
@@ -49,7 +49,6 @@ local Camera = Workspace.CurrentCamera
 local WtS = Camera.WorldToViewportPoint
 local UIContainer = gethui and gethui() or CoreGui
 local BootstrapPlayers = Players
-local LPHNoVirtualize = LPH_NO_VIRTUALIZE
 local ESP = {}
 local ChamsContainer
 local MeshChamsFolder
@@ -157,7 +156,8 @@ local function EnsureRootInstances()
 end
 
 local labelStrokeMap = setmetatable({}, { __mode = "k" })
-local DrawLine = LPHNoVirtualize(function(line, p1, p2, thickness, color)
+local DrawLine = function(line, p1, p2, thickness, color)
+    LPH_ATTRIBUTES(VM(NONE))
     local diff = p2 - p1
     local dist = diff.Magnitude
     local angle = math.deg(math.atan2(diff.Y, diff.X))
@@ -168,7 +168,7 @@ local DrawLine = LPHNoVirtualize(function(line, p1, p2, thickness, color)
     line.Rotation = angle
     line.BackgroundColor3 = color
     line.Visible = true
-end)
+end
 
 local ESPConfig = {
     -- esp checks
@@ -180,10 +180,12 @@ local ESPConfig = {
     Players = false,
     LocalPlayer = false,
     LimitFPS = 70, -- Set to 0 to disable limit
+    MaxDistance = 0, -- studs; 0 = unlimited. objects farther than this are hidden
     DynamicBoxes = true,
     DynamicBoxesCheap = false,           -- needs DynamicBoxes enabled, only tracks main parts
     DynamicBoxesIncludeAll = false,      -- needs DynamicBoxes enabled, includes every BasePart in the model
     VisibilityCheckRate = 0.3,
+    Filter = nil, -- optional function(instance, owner) returning whether the entry should be drawn
 
     -- boxes
     Boxes = false,
@@ -216,6 +218,12 @@ local ESPConfig = {
     -- healthbar
     HealthBar = {
         Enabled = false,
+        -- where the health value comes from:
+        --   "Humanoid"  - Humanoid.Health / MaxHealth (default)
+        --   "Average"   - mean of every BasePart's Health value (+ MaxHealth attribute)
+        --   "Part"      - a single part's Health value (see Part below)
+        Source = "Humanoid",
+        Part = "Head", -- part name used when Source == "Part"
         Position = "Left", -- "Left", "Right", "Top", "Bottom"
         SideGap = 2,
         Width = 2,
@@ -269,7 +277,7 @@ local ESPConfig = {
         TextSize = 12,
         Color = Color3.fromRGB(255, 255, 255),
         InventoryPath = "ReplicatedStorage.Players.%NAME%.Inventory",
-        UseToolFallback = false,
+        UseToolFallback = true,
     },
 
     -- flags
@@ -797,7 +805,8 @@ local function CreateLine(parent)
     return line, outline
 end
 
-local CreateESPObj = LPHNoVirtualize(function(name)
+local CreateESPObj = function(name)
+    LPH_ATTRIBUTES(VM(NONE))
     local espObj = {
         Visible = false,
         Lines = {},
@@ -1014,11 +1023,50 @@ local CreateESPObj = LPHNoVirtualize(function(name)
     end
 
     return espObj
-end)
+end
 
-local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, distanceStuds, instance, isCheap, nonHuman,
-                                              noStatus,
-                                              configOverride, onScreen)
+-- read a part's Health value + MaxHealth attribute (games that store hp per-part
+-- instead of on the humanoid). returns current, max or nil.
+local function ReadPartHealth(part)
+    if not part then return nil end
+    local hv = part:FindFirstChild("Health")
+    if hv and hv:IsA("ValueBase") then
+        return hv.Value, (hv:GetAttribute("MaxHealth") or 100)
+    end
+    return nil
+end
+
+-- resolve (health, maxHealth) for a character based on the HealthBar.Source mode
+local function GetHealthValues(instance, humanoid, source, partName)
+    if source == "Average" then
+        local total, totalMax, n = 0, 0, 0
+        for _, p in ipairs(instance:GetChildren()) do
+            if p:IsA("BasePart") then
+                local hp, max = ReadPartHealth(p)
+                if hp then
+                    total = total + hp
+                    totalMax = totalMax + max
+                    n = n + 1
+                end
+            end
+        end
+        if n > 0 then return total / n, totalMax / n end
+    elseif source == "Part" then
+        local hp, max = ReadPartHealth(instance:FindFirstChild(partName))
+        if hp then return hp, max end
+    end
+
+    -- fallback: humanoid
+    if humanoid then
+        return humanoid.Health, humanoid.MaxHealth
+    end
+    return 100, 100
+end
+
+local UpdateESPObj = function(espObj, position, size, name, distanceStuds, instance, isCheap, nonHuman,
+                                               noStatus,
+                                               configOverride, onScreen)
+    LPH_ATTRIBUTES(VM(NONE))
     local cfgCache = {}
     local function GetCfg(path)
         local cached = cfgCache[path]
@@ -1052,6 +1100,24 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
 
     local _now = tick()
     local humanoid = not nonHuman and instance:FindFirstChild("Humanoid") or nil
+
+    -- Max distance cull: hide everything past the configured range
+    local maxDist = GetCfg("MaxDistance")
+    if maxDist and maxDist > 0 and distanceStuds and distanceStuds > maxDist then
+        espObj.Container.Visible = false
+        if espObj.Highlight then espObj.Highlight:Destroy() espObj.Highlight = nil end
+        if espObj.MeshShell then espObj.MeshShell:Destroy() espObj.MeshShell = nil espObj.MeshHighlight = nil end
+        if espObj.Adornments then for _, a in pairs(espObj.Adornments) do a.Visible = false end end
+        if espObj.ArrowInner then
+            espObj.ArrowInner.Visible = false
+            espObj.ArrowOutline.Visible = false
+            espObj.ArrowName.Visible = false
+            espObj.ArrowDist.Visible = false
+        end
+        if espObj.Bones then for _, b in ipairs(espObj.Bones) do b.Visible = false end end
+        if espObj.BoneOutlines then for _, b in ipairs(espObj.BoneOutlines) do b.Visible = false end end
+        return
+    end
 
     -- Chams logic
     local isDead = (humanoid and humanoid.Health <= 0)
@@ -1497,7 +1563,11 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
 
     -- Get Health Early for Layout Offsets
     local health, maxHealth, healthPercent = 100, 100, 1
-    if humanoid then
+    local hbSource = GetCfg("HealthBar.Source")
+    if hbSource and hbSource ~= "Humanoid" then
+        health, maxHealth = GetHealthValues(instance, humanoid, hbSource, GetCfg("HealthBar.Part"))
+        healthPercent = math.clamp(health / (maxHealth > 0 and maxHealth or 1), 0, 1)
+    elseif humanoid then
         health = humanoid.Health
         maxHealth = humanoid.MaxHealth
         healthPercent = math.clamp(health / maxHealth, 0, 1)
@@ -1749,19 +1819,20 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
             end
         end
 
-        -- Fallback
+        -- Fallback: the equipped weapon is a Tool under the character
         if (not weaponName or weaponName == "" or weaponName == "nil") and GetCfg("Weapon.UseToolFallback") then
             local tool = instance:FindFirstChildWhichIsA("Tool")
             if tool then weaponName = tool.Name end
         end
 
-        if weaponName and weaponName ~= "" and weaponName ~= "nil" then
-            espObj.WeaponText.Visible = true
-            espObj.WeaponText.Text = weaponName
-            espObj.WeaponText.Position = UDim2.new(0, px - 50, 0, currentBottomY)
-        else
-            espObj.WeaponText.Visible = false
+        -- no tool held -> show "None"
+        if not weaponName or weaponName == "" or weaponName == "nil" then
+            weaponName = "None"
         end
+
+        espObj.WeaponText.Visible = true
+        espObj.WeaponText.Text = weaponName
+        espObj.WeaponText.Position = UDim2.new(0, px - 50, 0, currentBottomY)
     else
         espObj.WeaponText.Visible = false
     end
@@ -1997,11 +2068,12 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
             for _, b in ipairs(espObj.BoneOutlines) do b.Visible = false end
         end
     end
-end)
+end
 --
 
 --// logic
-local Get2DBoundingBox = LPHNoVirtualize(function(instance)
+local Get2DBoundingBox = function(instance)
+    LPH_ATTRIBUTES(VM(NONE))
     local rootPart
     if instance:IsA("Model") then
         rootPart = instance:FindFirstChild("HumanoidRootPart") or instance:FindFirstChild("Torso") or
@@ -2117,7 +2189,7 @@ local Get2DBoundingBox = LPHNoVirtualize(function(instance)
         end
         return true, Vector2.new((minX + maxX) / 2, (minY + maxY) / 2), Vector2.new(maxX - minX, maxY - minY)
     end
-end)
+end
 --
 
 --// custom functions logic
@@ -2162,7 +2234,8 @@ local function CheckBlockNames(inst, blockList)
     return false
 end
 
-local ScanDirectories = LPHNoVirtualize(function()
+local ScanDirectories = function()
+    LPH_ATTRIBUTES(VM(NONE))
     local newTracked = {}
 
     if ESPConfig.Players then
@@ -2170,7 +2243,7 @@ local ScanDirectories = LPHNoVirtualize(function()
             if not ESPConfig.LocalPlayer and player == LocalPlayer then continue end
             if player.Character then
                 local humanoid = player.Character:FindFirstChild("Humanoid")
-                if humanoid and humanoid.Health > 0 then
+                if humanoid and humanoid.Health > 0 and (not ESPConfig.Filter or ESPConfig.Filter(player.Character, player)) then
                     newTracked[player.Character] = { name = player.Name, Cheap = false }
                 end
             end
@@ -2275,7 +2348,7 @@ local ScanDirectories = LPHNoVirtualize(function()
             TrackedInstances[inst] = nil
         end
     end
-end)
+end
 
 local lastScan = 0
 local lastRender = 0
