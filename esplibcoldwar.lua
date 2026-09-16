@@ -185,7 +185,6 @@ local ESPConfig = {
     DynamicBoxesCheap = false,           -- needs DynamicBoxes enabled, only tracks main parts
     DynamicBoxesIncludeAll = false,      -- needs DynamicBoxes enabled, includes every BasePart in the model
     VisibilityCheckRate = 0.3,
-    Filter = nil, -- optional function(instance, owner) returning whether the entry should be drawn
 
     -- boxes
     Boxes = false,
@@ -2243,7 +2242,7 @@ local ScanDirectories = function()
             if not ESPConfig.LocalPlayer and player == LocalPlayer then continue end
             if player.Character then
                 local humanoid = player.Character:FindFirstChild("Humanoid")
-                if humanoid and humanoid.Health > 0 and (not ESPConfig.Filter or ESPConfig.Filter(player.Character, player)) then
+                if humanoid and humanoid.Health > 0 then
                     newTracked[player.Character] = { name = player.Name, Cheap = false }
                 end
             end
