@@ -70,11 +70,8 @@ if not Targeting then
     end
 end
 
--- diagnose targeting initialization
 if not Targeting then
     warn("[ESP] Targeting library failed to load. ESP will not function.")
-else
-    print("[ESP] Targeting library loaded successfully.")
 end
 
 if getgenv().SensoryESP_Unload then
@@ -827,7 +824,6 @@ end
 
 local CreateESPObj = function(name)
     LPH_ATTRIBUTES(VM(NONE))
-    print("[ESP] CreateESPObj called for:", name, "| ScreenGui:", ScreenGui, "| ScreenGui.Parent:", ScreenGui and ScreenGui.Parent)
     local espObj = {
         Visible = false,
         Lines = {},
@@ -845,7 +841,6 @@ local CreateESPObj = function(name)
     container.Name = "ESPObj"
     container.Parent = ScreenGui
     espObj.Container = container
-    print("[ESP] Container created and parented. Container.Parent:", container.Parent)
 
     local boxFill = Instance.new("Frame")
     boxFill.BorderSizePixel = 0
@@ -2052,7 +2047,6 @@ end
 --
 
 --// logic
-local runtimeStepCount = 0
 local Get2DBoundingBox = function(instance)
     LPH_ATTRIBUTES(VM(NONE))
     local rootPart
@@ -2065,18 +2059,11 @@ local Get2DBoundingBox = function(instance)
     end
 
     if not rootPart then
-        print("[ESP] Get2DBoundingBox: no rootPart found for", instance.Name)
         return false, nil, nil
     end
 
     local position, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
-    if runtimeStepCount <= 3 then
-        print("[ESP] Get2DBoundingBox:", instance.Name, "| rootPart:", rootPart.Name, "| position:", position, "| onScreen:", onScreen, "| Camera:", Camera)
-    end
     if not onScreen then
-        if runtimeStepCount <= 3 then
-            print("[ESP]   Early return: onScreen=false")
-        end
         return false, nil, nil
     end
 
@@ -2094,9 +2081,6 @@ local Get2DBoundingBox = function(instance)
             local top2D = Camera:WorldToViewportPoint(topPos)
             local bottom2D = Camera:WorldToViewportPoint(bottomPos)
             local height = math.abs(top2D.Y - bottom2D.Y)
-            if runtimeStepCount <= 3 then
-                print("[ESP]   Static humanoid box. height:", height)
-            end
             return true, Vector2.new(position.X, (top2D.Y + bottom2D.Y) / 2), Vector2.new(height * 0.65, height)
         end
 
@@ -2126,9 +2110,6 @@ local Get2DBoundingBox = function(instance)
             if screenPos.Y < minY then minY = screenPos.Y end
             if screenPos.Y > maxY then maxY = screenPos.Y end
         end
-        if runtimeStepCount <= 3 then
-            print("[ESP]   Static object box. minX:", minX, "maxX:", maxX, "minY:", minY, "maxY:", maxY)
-        end
         return true, Vector2.new((minX + maxX) / 2, (minY + maxY) / 2), Vector2.new(maxX - minX, maxY - minY)
     else
         -- DYNAMIC BOX
@@ -2146,9 +2127,6 @@ local Get2DBoundingBox = function(instance)
         end
 
         if #parts == 0 then
-            if runtimeStepCount <= 3 then
-                print("[ESP]   Dynamic box: no parts found")
-            end
             return false, nil, nil
         end
 
@@ -2190,9 +2168,6 @@ local Get2DBoundingBox = function(instance)
                     if screenPos.Y > maxY then maxY = screenPos.Y end
                 end
             end
-        end
-        if runtimeStepCount <= 3 then
-            print("[ESP]   Dynamic box result. minX:", minX, "maxX:", maxX, "minY:", minY, "maxY:", maxY)
         end
         return true, Vector2.new((minX + maxX) / 2, (minY + maxY) / 2), Vector2.new(maxX - minX, maxY - minY)
     end
@@ -2244,7 +2219,6 @@ end
 local ScanDirectories = function()
     LPH_ATTRIBUTES(VM(NONE))
     local newTracked = {}
-    print("[ESP] ScanDirectories started. ESPConfig.Players =", ESPConfig.Players)
 
     --[[
     if ESPConfig.Players then
@@ -2264,15 +2238,10 @@ local ScanDirectories = function()
         if not ESPConfig.LocalPlayer and player == LocalPlayer then continue end
         local state, character = Targeting:get_character(player)
         local viewmodel = Targeting:get_viewmodel(player)
-        print("[ESP] Player:", player.Name)
-        print("[ESP]   Character:", character, "| Parent:", character and character.Parent)
-        print("[ESP]   Viewmodel:", viewmodel, "| Parent:", viewmodel and viewmodel.Parent)
-        print("[ESP]   State:", state, "| State.viewmodel:", state and state.values and state.values.viewmodel)
 
         local target = viewmodel or character
         if target and target.Parent then
             local health = Targeting:get_health(player)
-            print("[ESP]   Health check:", health, "| Passes:", health > 0, "| Using:", target.Name)
             if health > 0 then
                 if not ESPConfig.Filter or ESPConfig.Filter(target, player) then
                     newTracked[target] = {
@@ -2283,9 +2252,6 @@ local ScanDirectories = function()
                         Actor = state,
                         Config = {}
                     }
-                    print("[ESP] Tracked player:", player.Name, "with", target.Name)
-                else
-                    print("[ESP]   Filter rejected:", player.Name)
                 end
             end
         end
@@ -2365,12 +2331,7 @@ local ScanDirectories = function()
     end
 
     for inst, data in pairs(newTracked) do
-        print("[ESP] newTracked entry:", data.name, "| Instance:", inst)
-    end
-
-    for inst, data in pairs(newTracked) do
         if not TrackedInstances[inst] then
-            print("[ESP] Creating ESP obj for:", data.name)
             TrackedInstances[inst] = {
                 espObj = CreateESPObj(data.name),
                 name = data.name,
@@ -2380,7 +2341,6 @@ local ScanDirectories = function()
                 Actor = data.Actor,
                 Config = data.Config
             }
-            print("[ESP] ESP obj created for:", data.name)
         else
             TrackedInstances[inst].name = data.name
             TrackedInstances[inst].Cheap = data.Cheap
@@ -2417,22 +2377,6 @@ local function RuntimeStep()
     end
 
     local now = tick()
-    runtimeStepCount = runtimeStepCount + 1
-
-    if runtimeStepCount == 1 then
-        local count = 0
-        for _ in pairs(TrackedInstances) do count = count + 1 end
-        print("[ESP] RuntimeStep #1. TrackedInstances count:", count)
-        for inst, data in pairs(TrackedInstances) do
-            print("[ESP]   Tracked:", data.name, "| Actor:", data.Actor, "| espObj:", data.espObj)
-        end
-    end
-
-    if runtimeStepCount % 60 == 0 then
-        local count = 0
-        for _ in pairs(TrackedInstances) do count = count + 1 end
-        print("[ESP] RuntimeStep fired 60 times. TrackedInstances count:", count)
-    end
 
     if FontsStillLoading and now - lastFontRetry > 5 then
         lastFontRetry = now
@@ -2469,15 +2413,9 @@ local function RuntimeStep()
         if rootPart then
             local onscreen, pos2d, size2d = Get2DBoundingBox(inst)
             local distanceStuds = (Camera.CFrame.Position - rootPart.Position).Magnitude
-            if runtimeStepCount <= 3 then
-                print("[ESP] Update for:", data.name, "| onscreen:", onscreen, "| pos2d:", pos2d, "| size2d:", size2d, "| distance:", distanceStuds)
-            end
             UpdateESPObj(data.espObj, pos2d, size2d, data.name, distanceStuds, inst, data.Cheap, data.NonHuman,
                 data.NoStatus, data.Config, onscreen, data.Actor)
         else
-            if runtimeStepCount <= 3 then
-                print("[ESP] No rootPart for:", data.name)
-            end
             UpdateESPObj(data.espObj, nil, nil, data.name, 0, inst, data.Cheap, data.NonHuman, data.NoStatus, data
                 .Config, false, data.Actor)
         end
@@ -2529,7 +2467,6 @@ function ESP:Load(config)
     self:Unload()
 
     ESPConfig = DeepMerge(DeepCopy(DefaultESPConfig), config or {})
-    print("[ESP] Load called. Enabled =", ESPConfig.Enabled, "| Players =", ESPConfig.Players)
     EnsureRootInstances()
     CurrentRunId = HttpService:GenerateGUID(false)
     lastScan = 0
@@ -2552,9 +2489,6 @@ function ESP:Load(config)
 
     getgenv().SensoryESP_Loop = RunService.RenderStepped:Connect(RuntimeStep)
     ScanDirectories()
-    local count = 0
-    for _ in pairs(TrackedInstances) do count = count + 1 end
-    print("[ESP] Initial scan complete. TrackedInstances count:", count)
     return self
 end
 
