@@ -2,57 +2,21 @@ local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 
 local repo = "https://raw.githubusercontent.com/ttokennxyz/vaultcc/refs/heads/main/"
-local queueOnTeleport = queue_on_teleport or (syn and syn.queue_on_teleport) or queueonteleport
 
 local function load(filename)
   loadstring(game:HttpGet(repo .. filename .. ".lua"))()
 end
 
-local function queueLoad(filename)
+local function load(filename)
 	local src = 'loadstring(game:HttpGet("' .. repo .. filename .. '.lua"))()'
 	local key = getgenv().script_key
 	if type(key) == "string" and key ~= "" then
 		src = "getgenv().script_key = " .. string.format("%q", key) .. "\n" .. src
 	end
-	if queueOnTeleport then
-		queueOnTeleport(src)
+	if run_on_actor and getactors then
+		run_on_actor(getactors()[1], src)
 	end
 end
-
-local function fflagEnabled()
-	if not getfflag then
-		return false
-	end
-	local ok, value = pcall(getfflag, "DebugRunParallelLuaOnMainThread")
-	if not ok then
-		return false
-	end
-	return value == true or value == "true" or value == "True"
-end
-
-local function enableFflag()
-	if not setfflag then
-		return
-	end
-	pcall(setfflag, "DebugRunParallelLuaOnMainThread", true)
-end
-
-local function inLobby()
-	local PlayerGui = Players.LocalPlayer:FindFirstChild("PlayerGui")
-	local left = PlayerGui.LoadoutMenu.Left
-	local center = left.Center
-    local crate = left.Bottom.CrateFrame
-    local loadouts = center.Loadouts
-    local mainmenu = center.MainMenu
-    local play = center.PlayFrame
-	return crate.Visible or loadouts.Visible or mainmenu.Visible or play.Visible
-end
-
-local lobby = inLobby()
-if lobby then
-	enableFflag()
-end
-local canLoad = lobby or fflagEnabled()
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "vaultcc"
@@ -75,6 +39,7 @@ mainFrame.BackgroundColor3 = layer1Color
 mainFrame.BorderColor3 = blueAccent
 mainFrame.BorderSizePixel = 1
 mainFrame.Parent = gui
+mainFrame.Draggable = true
 
 local headerLabel = Instance.new("TextLabel")
 headerLabel.Name = "HeaderLabel"
@@ -102,7 +67,7 @@ titleLabel.Name = "TitleLabel"
 titleLabel.Size = UDim2.new(1, -20, 0, 30)
 titleLabel.Position = UDim2.new(0, 10, 0, 10)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = canLoad and "Which script would you like to load?" or "Load from the lobby first"
+titleLabel.Text = "Which script would you like to load?"
 titleLabel.TextColor3 = textColor
 titleLabel.Font = font
 titleLabel.TextSize = 14
@@ -117,11 +82,11 @@ liteBtn.BackgroundColor3 = layer3Color
 liteBtn.BorderColor3 = borderColor
 liteBtn.BorderSizePixel = 1
 liteBtn.Text = "Lite"
-liteBtn.TextColor3 = canLoad and textColor or Color3.fromRGB(100, 100, 100)
+liteBtn.TextColor3 = textColor or Color3.fromRGB(100, 100, 100)
 liteBtn.Font = font
 liteBtn.TextSize = 14
 liteBtn.Parent = innerContentFrame
-liteBtn.Interactable = canLoad
+liteBtn.Interactable = true
 
 local fullBtn = Instance.new("TextButton")
 fullBtn.Name = "FullButton"
@@ -131,11 +96,11 @@ fullBtn.BackgroundColor3 = layer3Color
 fullBtn.BorderColor3 = borderColor
 fullBtn.BorderSizePixel = 1
 fullBtn.Text = "Full"
-fullBtn.TextColor3 = canLoad and textColor or Color3.fromRGB(100, 100, 100)
+fullBtn.TextColor3 = textColor
 fullBtn.Font = font
 fullBtn.TextSize = 14
 fullBtn.Parent = innerContentFrame
-fullBtn.Interactable = canLoad
+fullBtn.Interactable = true
 
 local function applyHoverEffect(button)
     button.MouseEnter:Connect(function()
@@ -146,25 +111,10 @@ local function applyHoverEffect(button)
     end)
 end
 
-if canLoad then
-	applyHoverEffect(liteBtn)
-	applyHoverEffect(fullBtn)
-end
+applyHoverEffect(liteBtn)
+applyHoverEffect(fullBtn)
 
 local function selectScript(filename)
-	if not canLoad then
-		return
-	end
-	if lobby then
-		enableFflag()
-		queueLoad(filename)
-		titleLabel.Text = "Loaded, join a match"
-		liteBtn.Interactable = false
-		fullBtn.Interactable = false
-		liteBtn.TextColor3 = Color3.fromRGB(100, 100, 100)
-		fullBtn.TextColor3 = Color3.fromRGB(100, 100, 100)
-		return
-	end
 	gui:Destroy()
 	load(filename)
 end
