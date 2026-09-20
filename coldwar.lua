@@ -1,15 +1,3 @@
---[[
-    cold war - vault.cc
-    ui: linorialib (https://github.com/violin-suzutsuki/LinoriaLib)
-    esp: dacces on v3rm
-]]
-
---[[
-TODO:
-look at terrain wallbang
-make auto refill ammo with ammo box in inventory
-look for vulns with vehicular kills and mounted machine guns
-]]
 
 if not LPH_OBFUSCATED then
 	LPH_ATTRIBUTES = function(...) end
@@ -62,14 +50,7 @@ local response = request({
 
 local decoded = HttpService:JSONDecode(response.Body)
 
-la_is_premium = true--decoded.expires_at == nil
---[[
-if decoded.valid == false then
-    setclipboard("https://discord.gg/Z7tvDkBUxX")
-    game.Players.LocalPlayer:Kick("Please get a key from our discord, the discord invite has been copied to your clipboard")
-    return
-end
---]]
+la_is_premium = true
 
 local paidToggleKeys = {
 	ragebot = true, ragebotautoreload = true, ragebotwallbang = true,
@@ -117,19 +98,15 @@ do
 	end
 end
 
--- load linoria + addons
 local LinoriaRepo = "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/"
 
 Library = loadstring(game:HttpGet(LinoriaRepo .. "Library.lua"))()
 local ThemeManager = loadstring(game:HttpGet(LinoriaRepo .. "addons/ThemeManager.lua"))()
 local SaveManager = loadstring(game:HttpGet(LinoriaRepo .. "addons/SaveManager.lua"))()
 
--- services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local GuiService = game:GetService("GuiService")
-local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 local RS = game:GetService("ReplicatedStorage")
 local Client = RS.Client
@@ -203,64 +180,12 @@ local flags = {
 	ESPMaster = false,
 }
 
-local function refreshFlags()
-	LPH_ATTRIBUTES(VM(NONE))
-	local toggles = Toggles
-	if not toggles then
-		return
-	end
-	local function read(key, fallback)
-		local toggle = toggles[key]
-		if toggle and toggle.Value ~= nil then
-			return toggle.Value
-		end
-		return fallback
-	end
-	flags.instantads = read("instantads", true)
-	flags.aimanywhere = read("aimanywhere", true)
-	flags.noadsslowdown = read("noadsslowdown", true)
-	flags.omnisprint = read("omnisprint", false)
-	flags.nohurtslowdown = read("nohurtslowdown", false)
-	flags.gunup = read("gunup", false)
-	flags.antiaimpitch = read("antiaimpitch", false)
-	flags.lightingoverride = read("lightingoverride", false)
-	flags.forceauto = read("forceauto", true)
-	flags.silentenabled = read("silentenabled", true)
-	flags.turretsilentenabled = read("turretsilentenabled", true)
-	flags.aimbotenabled = read("aimbotenabled", false)
-	flags.snaplines = read("snaplines", false)
-	flags.fovdraw = read("fovdraw", false)
-	flags.silentteamcheck = read("silentteamcheck", true)
-	flags.silentvisiblecheck = read("silentvisiblecheck", false)
-	flags.silentdistancecheck = read("silentdistancecheck", false)
-	flags.fovenabled = read("fovenabled", false)
-	flags.nodrop = read("nodrop", false)
-	flags.instantbullet = read("instantbullet", false)
-	flags.rpgprediction = read("rpgprediction", true)
-	flags.instantequip = read("instantequip", false)
-	flags.ragebot = read("ragebot", false)
-	flags.ragebotwallbang = read("ragebotwallbang", false)
-	flags.ragebotautoreload = read("ragebotautoreload", false)
-	flags.ragebottpaura = read("ragebottpaura", false)
-	flags.autoheal = read("autoheal", false)
-	flags.instantheal = read("instantheal", false)
-	flags.fastrevive = read("fastrevive", false)
-	flags.carmods = read("carmods", false)
-	flags.antisuppression = read("antisuppression", false)
-	flags.antiflashbang = read("antiflashbang", false)
-	flags.antiaimspin = read("antiaimspin", false)
-	flags.ESPMaster = read("ESPMaster", false)
-	flags.silentmaxdistance = ov("silentmaxdistance", 500)
-	flags.silenttarget = ov("silenttarget", "Head")
-	flags.fovsize = ov("fovsize", 100)
-end
-
 local function cloneOriginal(fn)
     return clonefunction and clonefunction(fn) or fn
 end
 
 local util = {}
-util.target = nil -- cached target part, refreshed every few frames
+util.target = nil
 
 local WeaponConfigs
 local isExplosiveShot = false
@@ -296,8 +221,6 @@ local function predictedProjectilePoint(origin, targetPart, muzzleConfig, bullet
 	return point + Vector3.new(0, gravity * travelTime * travelTime * 0.5 * strength, 0)
 end
 
--- downed players aren't dead but lie there with CharacterValues.Unconscious set true
--- (the same value the revive prompt reads). skip them so we don't shoot corpses
 local function isDowned(char)
 	LPH_ATTRIBUTES(VM(NONE))
 	if not char then
@@ -308,11 +231,8 @@ local function isDowned(char)
 	return u ~= nil and u.Value == true
 end
 
--- rounds spent since the last reload. bumped by every shot (manual + ragebot) and zeroed
--- on reload, so the ragebot knows when the mag is dry and stops firing blanks
 local rbShots = 0
 
--- part still on a live character?
 local function targetValid(part)
 	LPH_ATTRIBUTES(VM(NONE))
 	if not part or not part.Parent then
@@ -333,7 +253,7 @@ local weaponTick = 0
 local function findBest()
 	LPH_ATTRIBUTES(VM(NONE))
 	local now = os.clock()
-	if now == lastScanTick then
+	if now - lastScanTick < 0.05 then
 		return cachedTarget
 	end
 	lastScanTick = now
@@ -405,12 +325,12 @@ local function findBest()
 	return best
 end
 
--- synchronized target provider: guarantees 1:1 match between silent aim and target indicators
 util.getTarget = function()
 	LPH_ATTRIBUTES(VM(NONE))
 	if targetValid(cachedTarget) then
 		return cachedTarget
 	end
+	lastScanTick = 0
 	return findBest()
 end
 
@@ -448,22 +368,15 @@ util.getMuzzle = function()
 	return handle and handle:FindFirstChild("Muzzle1")
 end
 
--- refresh the cached target every 3 frames (keeps UI perfectly synced with zero FPS drop)
-local targetFrame = 0
 local function targetStep()
 	LPH_ATTRIBUTES(VM(NONE))
 	if not (flags.silentenabled or flags.turretsilentenabled or flags.aimbotenabled or flags.snaplines) then
 		util.target = nil
 		return
 	end
-	targetFrame = targetFrame + 1
-	if targetFrame >= 3 then
-		targetFrame = 0
-		util.target = findBest()
-	end
+	util.target = findBest()
 end
 
--- camera / mouse aimbot loop
 local function aimbotRenderStep()
 	LPH_ATTRIBUTES(VM(NONE))
 	if not flags.aimbotenabled then
@@ -499,7 +412,7 @@ local function aimbotRenderStep()
 			mousemoverel(deltaX, deltaY)
 		end
 	else
-		-- Camera CFrame interpolation
+
 		local currentCF = camera.CFrame
 		local targetCF = CFrame.new(currentCF.Position, targetPos)
 		if smoothness == 1 then
@@ -831,9 +744,9 @@ local function visualizeRay(startPos, endPos, isLocal, isTeam, isEnemy)
 	beam.CanCollide = false
 	beam.CanQuery = false
 	beam.CanTouch = false
-	beam.Material = Enum.Material[material] -- configurable material
-	beam.Color = color -- configurable color
-	beam.Size = Vector3.new(size, size, distance) -- configurable thickness
+	beam.Material = Enum.Material[material]
+	beam.Color = color
+	beam.Size = Vector3.new(size, size, distance)
 	beam.CFrame = CFrame.new(midpoint, endPos)
 	beam.Parent = workspace:FindFirstChild("Ignore") or workspace
 	beam.Transparency = transparency
@@ -877,7 +790,6 @@ if functions.onArcEnd.func then
 	end)
 end
 
--- FlybySuppression.fire is responsible for both the nearby-bullet crack and suppression.
 if functions.flybyFire.func then
 	local oldFlybyFire = cloneOriginal(functions.flybyFire.func)
 	hookfunction(functions.flybyFire.func, function(...)
@@ -889,8 +801,6 @@ if functions.flybyFire.func then
 	end)
 end
 
--- ExplosionEffects calls this for camera trauma. Suppression and deafening values are
--- handled below so explosion particles and ordinary world audio remain intact.
 local oldCameraShake = CameraShaker.Shake
 local originalCameraShake = cloneOriginal(oldCameraShake)
 CameraShaker.Shake = function(...)
@@ -932,8 +842,6 @@ if functions.getRecoilMult.func then
 	pcall(hookfunction, functions.getRecoilMult.func, new_getRecoilMult)
 end
 
--- BodyReplication serializes this angle for other clients. Change the local replication
--- state immediately before its normal encoder runs, without moving our own camera.
 if functions.sendOwnInfo.func then
 	local originalSendOwnInfo = cloneOriginal(functions.sendOwnInfo.func)
 	hookfunction(functions.sendOwnInfo.func, function(...)
@@ -948,7 +856,6 @@ if functions.sendOwnInfo.func then
 	end)
 end
 
--- BodyRotation runs for every replicated character, so only force the local player's pose.
 if functions.bodyWallPush.func then
 	local oldBodyWallPush = cloneOriginal(functions.bodyWallPush.func)
 	hookfunction(functions.bodyWallPush.func, function(info, ...)
@@ -963,8 +870,6 @@ if functions.bodyWallPush.func then
 	end)
 end
 
--- WeaponViewmodel only drives the local first-person weapon. Its raise/push state lives in
--- upvalues 2 and 3, which the parent update reads immediately after this function returns.
 if functions.viewmodelWallPush.func then
 	local oldViewmodelWallPush = cloneOriginal(functions.viewmodelWallPush.func)
 	hookfunction(functions.viewmodelWallPush.func, function(...)
@@ -978,8 +883,6 @@ if functions.viewmodelWallPush.func then
 	end)
 end
 
--- Keep pitch and the raised-weapon branch active every body-render frame. Running normally
--- bypasses wall push, so present the local pose as Walk only while BodyRotation evaluates it.
 if functions.bodyRotationUpdate.func then
 	local oldBodyRotationUpdate = cloneOriginal(functions.bodyRotationUpdate.func)
 	hookfunction(functions.bodyRotationUpdate.func, function(character, info)
@@ -1011,7 +914,6 @@ if functions.bodyRotationUpdate.func then
 	end)
 end
 
--- Handheld fire replacement: preserves native effects while redirecting only this path.
 if functions.fire.func then
 	local oldFire = cloneOriginal(functions.fire.func)
 	hookfunction(functions.fire.func, function(p22, p23)
@@ -1094,7 +996,6 @@ if functions.fire.func then
 	end)
 end
 
--- Mounted guns use a distinct fireOnce path, controlled independently from handheld aim.
 if functions.fireOnce.func then
 	local oldFireOnce = cloneOriginal(functions.fireOnce.func)
 	hookfunction(functions.fireOnce.func, function()
@@ -1235,8 +1136,6 @@ functions.firemodestart.func = hookfunction(functions.firemodestart.func, functi
 end)
 end
 
--- instant equip: drawTool/holsterCurrent only wait on the equip anim when holdForTrack
--- returns true, so forcing it false makes them EquipTool/UnequipTools instantly
 if functions.awaitLength.func then
 	local oldAwaitLength = cloneOriginal(functions.awaitLength.func)
 	functions.awaitLength.func = hookfunction(functions.awaitLength.func, function(...)
@@ -1248,8 +1147,6 @@ if functions.awaitLength.func then
 	end)
 end
 
--- no hurt slowdown: the game scales speed by 0.5 + (legHP%avg)/2 (down to 0.5 when legs
--- are dead). recompute that same factor and divide it back out after the update runs
 local function legHealthMult(char)
 	local function ratio(name)
 		local part = char:FindFirstChild(name)
@@ -1276,15 +1173,13 @@ if functions.movementupdate.func then
 		if not flags.omnisprint and not flags.nohurtslowdown then
 			return oldMovementUpdate(p11)
 		end
-		-- omni sprint: the run state only kicks in when moving forward in first person.
-		-- force firstPerson off so the game treats every direction as sprint-able
+
 		if flags.omnisprint and p11 then
 			p11.firstPerson = false
 		end
 
 		oldMovementUpdate(p11)
 
-		-- no hurt slowdown: undo the leg-health speed penalty
 		if flags.nohurtslowdown and p11 and p11.humanoid and p11.character then
 			local mult = legHealthMult(p11.character)
 			if mult and mult > 0 and mult < 1 then
@@ -1297,7 +1192,6 @@ if functions.movementupdate.func then
 	end)
 end
 
--- bullet trajectory mods: drop + travel speed all come out of Trajectory.new
 local oldTrajNew = Trajectory.new
 Trajectory.new = function(params)
 	LPH_ATTRIBUTES(VM(NONE))
@@ -1306,8 +1200,8 @@ Trajectory.new = function(params)
 			params.Gravity = 0
 		end
 		if flags.instantbullet then
-			params.MuzzleSpeed = 1e6 -- covers max distance on the first step = hitscan
-			params.K = 0 -- no speed decay
+			params.MuzzleSpeed = 1e6
+			params.K = 0
 		end
 	end
 	return oldTrajNew(params)
@@ -1315,11 +1209,6 @@ end
 
 local Remotes = RS:WaitForChild("Remotes")
 
--- auto heal: fire the game's HealLimb remote for each damaged limb directly. treatLimb
--- (found in gc) captures the bandage remote as upvalue 1 and the currently equipped
--- bandage as upvalue 2, so we heal with whatever bandage is equipped. firing the remote
--- straight skips the local 5s bar + the speed penalty, so there's no slowdown to undo.
--- we fire every damaged limb each pass to see if the server allows simultaneous heals
 local healAcc = 0
 local healRemote, healBandage
 local function autoHealStep(dt)
@@ -1357,7 +1246,6 @@ local function autoHealStep(dt)
 	end
 end
 
--- fast revive: downed players' RevivePrompts have a hold time; pin them to the 3s floor
 local reviveAcc = 0
 local function fastReviveStep(dt)
 	LPH_ATTRIBUTES(VM(NONE))
@@ -1367,21 +1255,21 @@ local function fastReviveStep(dt)
 	reviveAcc = reviveAcc + dt
 	if reviveAcc < 1 then
 		return
-	end -- scan once a second
+	end
 	reviveAcc = 0
 
 	local chars = workspace:FindFirstChild("Characters")
 	if not chars then
 		return
 	end
-	for _, p in ipairs(chars:GetDescendants()) do
-		if p:IsA("ProximityPrompt") and p.Name == "RevivePrompt" then
+	local prompts = chars:QueryDescendants("#RevivePrompt")
+	for _, p in prompts do
+		if p:IsA("ProximityPrompt") then
 			p.HoldDuration = 3
 		end
 	end
 end
 
--- Vehicle profiles are keyed by the discovered ShopInfo name and faction.
 local carDefaults = {
 	FinalDrive = 7.5,
 	ShiftRPM = 7000,
@@ -1548,7 +1436,6 @@ local function discoverCars()
 		end
 	end
 
-	-- Fallback for configs held only in closures/upvalues rather than ModuleScripts.
 	if not manager then
 		for _, value in pairs(getgc(true)) do
 			if
@@ -1660,10 +1547,6 @@ local function carModsStep(dt)
 	applyCarMods()
 end
 
--- ragebot: independent auto-fire, fully separate from silent aim. it fires straight
--- through the client fire module (downstream of the silent aim hook) at any enemy it can
--- actually damage: clear line of sight, or a penetrable wall when wallbang is on.
--- runs in its own thread with a paced while-loop instead of per-frame render/heartbeat
 local function findClientFire(upvalues)
 	for _, value in pairs(upvalues or {}) do
 		if type(value) == "table" and type(value.fire) == "function" then
@@ -1676,9 +1559,8 @@ local ClientFire = findClientFire(functions.fire.upv)
 if type(ClientFire) == "table" and not ClientFire.fireVolley and functions.fireVolleyFn then
 	ClientFire.fireVolley = functions.fireVolleyFn
 end
-local WeaponRemote = Remotes:WaitForChild("Weapon") -- reload requests go here
--- the config manager keeps every weapon config keyed by tool name; grab that table off
--- GetAllMuzzlesConfig so we get real fire rate / ammo / penetration instead of guessing
+local WeaponRemote = Remotes:WaitForChild("Weapon")
+
 WeaponConfigs = functions.muzzlesConfig.func and debug.getupvalue(functions.muzzlesConfig.func, 1)
 local Materials = select(
 	2,
@@ -1690,15 +1572,12 @@ if type(Materials) ~= "table" then
 	Materials = nil
 end
 
--- muzzle config for the held gun (Firerate, Ammo, ReloadTime, BulletSettings[i].Penetration)
 local function rbMuzzleConfig(tool, muzzleIndex)
 	LPH_ATTRIBUTES(VM(NONE))
 	local wc = WeaponConfigs and WeaponConfigs[tool.Name]
 	return wc and wc[muzzleIndex]
 end
 
--- find where a bullet exits a wall, same idea as ProjectileCaster.findExit: cast back
--- through just that part to get its far face
 local rbExitParams = RaycastParams.new()
 rbExitParams.FilterType = Enum.RaycastFilterType.Include
 local rbHitParams = RaycastParams.new()
@@ -1714,14 +1593,11 @@ local function rbFindExit(hitPos, dir, inst)
 	return r and r.Position or nil
 end
 
--- walk the ray toward the target through walls, spending the penetration budget by
--- thickness * material cost (the same maths interactions.resolve uses). true if a bullet
--- would still reach the target character
 local function rbPenetrable(origin, targetPos, targetChar, budget, ignore)
 	LPH_ATTRIBUTES(VM(NONE))
 	if not budget or budget <= 0 then
 		return false
-	end -- no budget -> can't wallbang
+	end
 	local remaining = budget
 	local pos = origin
 	for _ = 1, 8 do
@@ -1754,7 +1630,6 @@ local function rbPenetrable(origin, targetPos, targetChar, budget, ignore)
 	return false
 end
 
--- can we deal damage to this target from origin right now?
 local function rbCanDamage(origin, targetPos, targetChar, budget, ignore)
 	LPH_ATTRIBUTES(VM(NONE))
 	local delta = targetPos - origin
@@ -1772,7 +1647,6 @@ local function rbCanDamage(origin, targetPos, targetChar, budget, ignore)
 	return rbPenetrable(origin, targetPos, targetChar, budget, ignore)
 end
 
--- reload request buffer: {action=Reload(1), muzzleIndex, bulletIndex}
 local function rbReloadServer(muzzleIndex, bulletIndex)
 	local b = buffer.create(3)
 	buffer.writeu8(b, 0, 1)
@@ -1781,8 +1655,6 @@ local function rbReloadServer(muzzleIndex, bulletIndex)
 	WeaponRemote:FireServer(b)
 end
 
--- part priority: head and torso deal the most damage, so try them first, then any other
--- limb. scanning every part means we can tag a target the moment any bit of them is exposed
 local rbPartOrder = { "Head", "Torso", "HumanoidRootPart", "Left Arm", "Right Arm", "Left Leg", "Right Leg" }
 local function rbBestPart(targetChar, origin, budget, ignore)
 	LPH_ATTRIBUTES(VM(NONE))
@@ -1798,7 +1670,7 @@ local function rbBestPart(targetChar, origin, budget, ignore)
 end
 
 local rbNextFire = 0
-local rbReloadUntil = 0 -- hold fire until this time while a reload lands
+local rbReloadUntil = 0
 local rbLastTool = nil
 local function ragebotStep()
 	LPH_ATTRIBUTES(VM(NONE))
@@ -1823,7 +1695,6 @@ local function ragebotStep()
 		origin = head.Position
 	end
 
-
 	local muzzleIndex, bulletIndex = 1, 1
 	local mc = rbMuzzleConfig(tool, muzzleIndex)
 	local firerate = (mc and mc.Firerate) or 600
@@ -1832,20 +1703,16 @@ local function ragebotStep()
 	local bs = mc and mc.BulletSettings and mc.BulletSettings[bulletIndex]
 	local budget = (bs and bs.Penetration) or 0
 
-	-- new gun -> reset the ammo tracker
 	if tool ~= rbLastTool then
 		rbLastTool = tool
 		rbShots = 0
 		rbReloadUntil = 0
 	end
 
-	-- mid-reload: hold fire until it lands (instant reload cuts the wait to ~0)
 	if os.clock() < rbReloadUntil then
 		return
 	end
 
-	-- out of ammo: never fire a dry mag. auto reload if it's on, otherwise wait for the
-	-- player to reload (which zeroes rbShots via the reload hook)
 	if magSize > 0 and rbShots >= magSize then
 		if flags.ragebotautoreload then
 			rbReloadServer(muzzleIndex, bulletIndex)
@@ -1855,7 +1722,6 @@ local function ragebotStep()
 		return
 	end
 
-	-- Do not spend rays finding an origin until the weapon can actually fire.
 	if os.clock() < rbNextFire then
 		return
 	end
@@ -1866,12 +1732,11 @@ local function ragebotStep()
 		ignore[#ignore + 1] = ig
 	end
 
-	-- Check nearest enemies first so a valid target stops all further origin scans.
 	local me = LocalPlayer
 	local candidates = {}
 	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr ~= me and plr.Character and not isDowned(plr.Character) then -- skip downed
-			if not (me.Team and plr.Team == me.Team) then -- never teammates
+		if plr ~= me and plr.Character and not isDowned(plr.Character) then
+			if not (me.Team and plr.Team == me.Team) then
 				local hum = plr.Character:FindFirstChildOfClass("Humanoid")
 				local ref = plr.Character:FindFirstChild("HumanoidRootPart") or plr.Character:FindFirstChild("Head")
 				if hum and hum.Health > 0 and ref then
@@ -1894,7 +1759,7 @@ local function ragebotStep()
 	end
 
 	if best then
-		rbNextFire = os.clock() + 60 / firerate -- respect the weapon's real fire rate
+		rbNextFire = os.clock() + 60 / firerate
 		origin = shotOrigin or origin
 		local targetPoint = best.Position
 		if bulletIsRocket(mc, bs) then
@@ -1918,7 +1783,7 @@ local function tpAuraStep()
 	end
 	if os.clock() - lastTpTime < 2.0 then
 		return
-	end -- hold at target location for 2s before next teleport
+	end
 
 	local me = LocalPlayer
 	local char = me.Character
@@ -1997,7 +1862,6 @@ local function rageSchedulerStep(dt)
 	end
 end
 
--- window + tabs
 local Window = Library:CreateWindow({
 	Title = "Cold War - vault.cc [" .. (la_is_premium == true and "Paid" or "Free") .. "]",
 	Center = true,
@@ -2018,8 +1882,6 @@ if la_is_premium then
 end
 Tabs.Settings = Window:AddTab("Settings")
 
-
--- load esp lib, pcall so a bad fetch doesnt take the whole ui down
 local espCfg
 local espOk, ESP = pcall(function()
 	LPH_ATTRIBUTES(VM(NONE))
@@ -2029,9 +1891,9 @@ local espOk, ESP = pcall(function()
 end)
 
 if espOk and type(ESP) == "table" then
-	-- start disabled, ui drives everything through applyESP
+
 	pcall(function()
-		ESP:Load({ Enabled = false })
+		ESP:Load({ Enabled = false, Players = false, LocalPlayer = false, LimitFPS = 45, DynamicBoxes = false })
 		espCfg = ESP:GetConfig()
 	end)
 else
@@ -2040,24 +1902,20 @@ else
 	Library:Notify("Failed to load ESP library.")
 end
 
--- push every control into the live esp config
--- lib re-reads config each frame so mutating espCfg is instant
 local function applyESP()
 	local c = espCfg
 	if not c then
 		return
 	end
 
-	-- core
 	c.Enabled = Toggles.ESPMaster.Value
-	c.LocalPlayer = false -- never draw ourselves
+	c.LocalPlayer = false
 	c.MaxDistance = Options.ESPMaxDistance.Value
-	c.DynamicBoxes = true -- always dynamic boxes
+	c.LimitFPS = 45
+	c.DynamicBoxes = false
 	c.DynamicBoxesCheap = true
 	c.DynamicBoxesIncludeAll = false
-	-- players/directories handled in refreshTeamFilter
 
-	-- boxes
 	c.Boxes = Toggles.ESPBoxes.Value
 	c.BoxType = Options.ESPBoxType.Value
 	c.BoxColor = Options.ESPBoxColor.Value
@@ -2065,12 +1923,10 @@ local function applyESP()
 	c.Outlines.Style = Toggles.ESPBoxOutline.Value and "Full" or "None"
 	c.Outlines.Color = Options.ESPBoxOutlineColor.Value
 
-	-- box fill
 	c.BoxFill.Enabled = Toggles.ESPBoxFill.Value
 	c.BoxFill.Color = Options.ESPBoxFillColor.Value
 	c.BoxFill.Transparency = Options.ESPBoxFillTransparency.Value
 
-	-- names + info
 	c.Names = Toggles.ESPNames.Value
 	c.TextColor = Options.ESPNameColor.Value
 	c.TextSize = Options.ESPTextSize.Value
@@ -2078,20 +1934,17 @@ local function applyESP()
 	c.Distance.Enabled = Toggles.ESPDistance.Value
 	c.Distance.Color = Options.ESPDistanceColor.Value
 	c.Weapon.Enabled = Toggles.ESPWeapon.Value
-	c.Weapon.UseToolFallback = true -- weapons are Tools under the character
+	c.Weapon.UseToolFallback = true
 	c.TeamIndicator.Enabled = Toggles.ESPTeam.Value
 	c.FriendlyIndicator.Enabled = Toggles.ESPFriendly.Value
 	c.FriendlyIndicator.CheckTeam = Toggles.ESPFriendly.Value
 	c.FriendlyIndicator.CheckFriends = Toggles.ESPFriendly.Value
 
-	-- health (lib reads per-part health via HealthBar.Source; see esp lib)
 	c.HealthBar.Enabled = Toggles.ESPHealth.Value
 	c.HealthBar.ShowText = true
 	c.HealthBar.Source = (Options.ESPHealthMode.Value == "Target part") and "Part" or "Average"
 	c.HealthBar.Part = ov("silenttarget", "Head")
 
-	-- chams. feed the same color/transparency into all 3 modes so the
-	-- type dropdown just works without extra pickers
 	c.Chams.Enabled = Toggles.ESPChams.Value
 	c.Chams.Type = Options.ESPChamsType.Value
 
@@ -2117,7 +1970,6 @@ local function applyESP()
 	c.Chams.Adornment.Transparency = fillT
 	c.Chams.Adornment.VisibleCheck = visCheck
 
-	-- flags + arrows
 	c.Flags.Enabled = Toggles.ESPFlags.Value
 	c.Flags.Options.Idle = Toggles.ESPFlagIdle.Value
 	c.Flags.Options.Moving = Toggles.ESPFlagMoving.Value
@@ -2128,10 +1980,6 @@ local function applyESP()
 	c.OffScreenArrows.Size = Options.ESPArrowSize.Value
 end
 
--- player tracking + teammate filter
--- lib has no team filter on its Players scan, so when filter is on we kill that
--- and feed only enemies through the Directories system instead (still tracks the
--- real char models so boxes/chams/health all work)
 local function refreshTeamFilter()
 	local c = espCfg
 	if not c then
@@ -2145,7 +1993,7 @@ local function refreshTeamFilter()
 		local dirs = {}
 		for _, plr in ipairs(Players:GetPlayers()) do
 			if plr ~= me and plr.Character then
-				-- same teamcheck as util.getTarget
+
 				if not (me.Team and plr.Team == me.Team) then
 					dirs[#dirs + 1] = { DisplayName = plr.Name, Path = plr.Character:GetFullName() }
 				end
@@ -2153,15 +2001,12 @@ local function refreshTeamFilter()
 		end
 		c.Directories = dirs
 	else
-		-- filter off, just use the built-in scan
+
 		c.Players = true
 		c.Directories = {}
 	end
 end
 
--- combat tab
-
---right: gunmods
 local gunmods = Tabs.Combat:AddRightGroupbox("Gun Mods")
 gunmods:AddSlider("recoilmult", { Text = "Recoil Multiplier", Default = 0, Min = 0, Max = 1, Rounding = 2 })
 gunmods:AddSlider("spreadmult", { Text = "Spread Multiplier", Default = 0, Min = 0, Max = 1, Rounding = 2 })
@@ -2181,7 +2026,6 @@ gunmods:AddSlider(
 	{ Text = "RPG Prediction Strength", Default = 1, Min = 0, Max = 2, Rounding = 2 }
 )
 
---right: aiming
 local aiming = Tabs.Combat:AddLeftGroupbox("Aiming")
 aiming
 	:AddToggle("aimbotenabled", { Text = "Aimbot Enabled", Default = false })
@@ -2210,7 +2054,6 @@ aiming:AddToggle("aimanywhere", { Text = "Aim Anywhere", Default = true })
 aiming:AddToggle("instantads", { Text = "Instant ADS", Default = true })
 aiming:AddToggle("noadsslowdown", { Text = "No ADS Slowdown", Default = true })
 
---left: silent
 local silent = Tabs.Combat:AddLeftGroupbox("Silent Aim")
 silent
 	:AddToggle(
@@ -2239,10 +2082,10 @@ silent:AddDropdown(
 		Multi = false,
 	}
 )
-Options["silenttarget"]:OnChanged(function(val) -- target part
+Options["silenttarget"]:OnChanged(function(val)
 	if espCfg then
 		espCfg.HealthBar.Part = val
-	end -- keep "Target part" health in sync
+	end
 end)
 silent:AddToggle(
 	"silentvisiblecheck",
@@ -2270,7 +2113,7 @@ silent
 	:AddColorPicker("snaptargetcolor", { Default = Color3.fromRGB(255, 0, 0), Title = "Snapline color" })
 
 if la_is_premium then
-    --left: ragebot (separate from silent aim, auto-fires on its own)
+
     local ragebot = Tabs.Combat:AddRightGroupbox("Ragebot")
     ragebot
     	:AddToggle("ragebot", { Text = "Enabled", Default = false })
@@ -2289,11 +2132,9 @@ if la_is_premium then
     )
 end
 
--- fov circle drawing
--- screengui in gethui() with coregui fallback, same as the esp lib
 local fovGui = Instance.new("ScreenGui")
 fovGui.Name = "cwfov"
-fovGui.IgnoreGuiInset = true -- Absolute Screen Space
+fovGui.IgnoreGuiInset = true
 fovGui.ResetOnSpawn = false
 fovGui.DisplayOrder = 100
 fovGui.Parent = (gethui and gethui()) or game:GetService("CoreGui")
@@ -2306,7 +2147,7 @@ fovCircle.Visible = false
 fovCircle.Parent = fovGui
 
 local fovCorner = Instance.new("UICorner")
-fovCorner.CornerRadius = UDim.new(1, 0) -- half of size = perfect circle
+fovCorner.CornerRadius = UDim.new(1, 0)
 fovCorner.Parent = fovCircle
 
 local fovStroke = Instance.new("UIStroke")
@@ -2321,7 +2162,7 @@ local function fovRenderStep()
 		return
 	end
 
-	local m = UserInputService:GetMouseLocation() -- Absolute Screen Position
+	local m = UserInputService:GetMouseLocation()
 	local r = ov("fovsize", 100)
 	fovCircle.Size = UDim2.fromOffset(r * 2, r * 2)
 	fovCircle.Position = UDim2.fromOffset(m.X, m.Y)
@@ -2330,10 +2171,9 @@ local function fovRenderStep()
 	fovCircle.Visible = true
 end
 
--- snaplines: one line from the cursor to the cached target (viewport space throughout)
 local snapGui = Instance.new("ScreenGui")
 snapGui.Name = "cwsnap"
-snapGui.IgnoreGuiInset = true -- Absolute Screen Space
+snapGui.IgnoreGuiInset = true
 snapGui.ResetOnSpawn = false
 snapGui.DisplayOrder = 100
 snapGui.Parent = (gethui and gethui()) or game:GetService("CoreGui")
@@ -2367,9 +2207,6 @@ local function snapRenderStep()
 	snapLine.Visible = false
 end
 
--- esp tab
-
--- left: main
 local espMain = Tabs.ESP:AddLeftGroupbox("Main")
 espMain:AddToggle("ESPMaster", { Text = "Enabled", Default = false })
 espMain:AddToggle(
@@ -2388,7 +2225,6 @@ espMain:AddSlider(
 	}
 )
 
--- left: boxes
 local espBox = Tabs.ESP:AddLeftGroupbox("Boxes")
 espBox:AddToggle("ESPBoxes", { Text = "Boxes", Default = true })
 espBox:AddDropdown("ESPBoxType", { Text = "Box type", Values = { "Normal", "Corner" }, Default = 1, Multi = false })
@@ -2410,7 +2246,6 @@ espBox:AddSlider(
 	{ Text = "Fill transparency", Default = 0.9, Min = 0, Max = 1, Rounding = 2 }
 )
 
--- left: chams
 local espChams = Tabs.ESP:AddRightGroupbox("Chams")
 espChams:AddToggle("ESPChams", { Text = "Chams", Default = false })
 espChams:AddDropdown(
@@ -2435,7 +2270,6 @@ espChams:AddToggle(
 	{ Text = "Visible check", Default = false }
 )
 
--- right: names + info
 local espInfo = Tabs.ESP:AddLeftGroupbox("Names & Info")
 espInfo:AddToggle("ESPNames", { Text = "Names", Default = true })
 espInfo
@@ -2455,7 +2289,6 @@ espInfo:AddToggle(
 	{ Text = "Friendly indicator", Default = false }
 )
 
--- right: health
 local espHealth = Tabs.ESP:AddRightGroupbox("Health")
 espHealth:AddToggle("ESPHealth", { Text = "Health", Default = false })
 espHealth:AddDropdown(
@@ -2468,7 +2301,6 @@ espHealth:AddDropdown(
 	}
 )
 
--- right: flags + arrows
 local espFlags = Tabs.ESP:AddRightGroupbox("Flags & Arrows")
 espFlags:AddToggle("ESPFlags", { Text = "Status flags", Default = false })
 espFlags:AddToggle("ESPFlagIdle", { Text = "Flag: Idle", Default = false })
@@ -2482,8 +2314,6 @@ espFlags
 	:AddColorPicker("ESPArrowColor", { Default = Color3.fromRGB(255, 255, 255), Title = "Arrow color" })
 espFlags:AddSlider("ESPArrowSize", { Text = "Arrow size", Default = 14, Min = 8, Max = 40, Rounding = 0 })
 
--- hook every control to applyESP. OnChanged fires right away on attach and on
--- every change/config load after
 local espToggleKeys = {
 	"ESPMaster",
 	"ESPBoxes",
@@ -2533,13 +2363,11 @@ for _, key in ipairs(espOptionKeys) do
 	Options[key]:OnChanged(applyESP)
 end
 
--- filter drives player tracking, not applyESP
 Toggles.ESPFilterTeam:OnChanged(refreshTeamFilter)
 
 applyESP()
 refreshTeamFilter()
 
--- keep enemy list fresh (joins/leaves, team swaps, respawns)
 local teamFilterAcc = 0
 local function teamFilterStep(dt)
 	LPH_ATTRIBUTES(VM(NONE))
@@ -2554,7 +2382,6 @@ local function teamFilterStep(dt)
 	refreshTeamFilter()
 end
 
--- Lighting editor: snapshot every property we touch so disabling/unloading is reversible.
 local Lighting = game:GetService("Lighting")
 local lightingProperties = {
 	"GlobalShadows",
@@ -2708,7 +2535,6 @@ local function applyLighting()
 	end
 end
 
---visuals tab
 local lightingMain = Tabs.Visuals:AddRightGroupbox("Lighting")
 lightingMain:AddToggle(
 	"lightingoverride",
@@ -3002,7 +2828,6 @@ Tracers:AddSlider(
 )
 Tracers:AddSlider("bullettracersize", { Text = "Bullet Tracer Size", Default = 0.1, Min = 0.01, Max = 1, Rounding = 2 })
 
--- misc tab
 local moderatorListVisible = true
 local moderatorListX = 10
 local moderatorListY = 200
@@ -3292,7 +3117,7 @@ if la_is_premium then
     		return
     	end
     	antiEffectsAcc = antiEffectsAcc + dt
-    	if antiEffectsAcc < 0.1 then
+    	if antiEffectsAcc < 0.5 then
     		return
     	end
     	antiEffectsAcc = 0
@@ -3371,7 +3196,7 @@ if la_is_premium then
 
     local miscVehicle = Tabs.Misc:AddRightGroupbox("Vehicles")
     miscVehicle:AddToggle("carmods", { Text = "Car Mods", Default = false })
-    Toggles["carmods"]:OnChanged(function(val) -- car mods
+    Toggles["carmods"]:OnChanged(function(val)
     	applyCarMods()
     end)
     miscVehicle:AddDropdown(
@@ -3539,14 +3364,11 @@ if la_is_premium then
     	Options.carprofile:SetValue(selectedCar)
     end
 end
--- settings tab (menu + config)
+
 local menuGroup = Tabs.Settings:AddLeftGroupbox("Menu")
 
 local DiscordInvite = "NUfjhQcETc"
 
--- opens an invite straight in the desktop discord client. discord runs a local rpc
--- server on one of ports 6463-6472; the INVITE_BROWSER command pops the invite. the
--- Origin header has to look like discord.com or the rpc rejects it
 local function openDiscordInvite(code)
 	local request = http_request
 		or request
@@ -3638,43 +3460,85 @@ Options.ModeratorListY:OnChanged(function(val)
 	end
 end)
 
--- menu open/close key
 Library.ToggleKeybind = Options.MenuKeybind
 
--- One simulation scheduler and one late render scheduler for all recurring work.
-local lightingAcc = 0
+for key in flags do
+	local toggle = Toggles and Toggles[key]
+	if toggle then
+		toggle:OnChanged(function(value)
+			if paidToggleKeys[key] and la_is_premium ~= true then
+				flags[key] = false
+				return
+			end
+			flags[key] = value
+		end)
+		if toggle.Value ~= nil then
+			flags[key] = (paidToggleKeys[key] and la_is_premium ~= true) and false or toggle.Value
+		end
+	else
+		local option = Options and Options[key]
+		if option and option.Value ~= nil then
+			option:OnChanged(function(value)
+				if paidOptionKeys[key] and la_is_premium ~= true then
+					return
+				end
+				flags[key] = value
+			end)
+			flags[key] = option.Value
+		end
+	end
+end
+
 local heartbeatConn = RunService.Heartbeat:Connect(function(dt)
 	LPH_ATTRIBUTES(VM(NONE))
-	refreshFlags()
-	targetStep()
-	if la_is_premium then
-    	movementStep(dt)
-    	autoHealStep(dt)
-    	fastReviveStep(dt)
-    	carModsStep(dt)
+	if flags.silentenabled or flags.turretsilentenabled or flags.aimbotenabled or flags.snaplines then
+		targetStep()
 	end
-	teamFilterStep(dt)
 	if la_is_premium then
-	    antiEffectsStep(dt)
-		rageSchedulerStep(dt)
+		if flags.antiaimspin then
+			movementStep(dt)
+		end
+		if flags.autoheal then
+			autoHealStep(dt)
+		end
+		if flags.fastrevive then
+			fastReviveStep(dt)
+		end
+		if flags.carmods then
+			carModsStep(dt)
+		end
+		if flags.antisuppression or flags.antiflashbang then
+			antiEffectsStep(dt)
+		end
+		if flags.ragebot or flags.ragebottpaura then
+			rageSchedulerStep(dt)
+		end
+	end
+	if flags.ESPMaster then
+		teamFilterStep(dt)
 	end
 	if flags.lightingoverride then
-		lightingAcc += dt
-		if lightingAcc >= 0.15 then
-			lightingAcc = 0
-			applyLighting()
-		end
+		applyLighting()
 	end
 end)
 
 RunService:BindToRenderStep("cwmain", Enum.RenderPriority.Last.Value + 10, function()
 	LPH_ATTRIBUTES(VM(NONE))
-	aimbotRenderStep()
-	fovRenderStep()
-	snapRenderStep()
+	if flags.aimbotenabled then
+		aimbotRenderStep()
+	end
+	if flags.fovdraw then
+		fovRenderStep()
+	elseif fovCircle.Visible then
+		fovCircle.Visible = false
+	end
+	if flags.snaplines then
+		snapRenderStep()
+	elseif snapLine.Visible then
+		snapLine.Visible = false
+	end
 end)
 
--- kill esp on unload
 Library:OnUnload(function()
 	if heartbeatConn then
 		heartbeatConn:Disconnect()
@@ -3737,7 +3601,6 @@ Library:OnUnload(function()
 	end
 end)
 
--- config + theme
 ThemeManager:SetLibrary(Library)
 SaveManager:SetLibrary(Library)
 
@@ -3747,11 +3610,9 @@ SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
 ThemeManager:SetFolder("VaultCC")
 SaveManager:SetFolder("VaultCC/ColdWar")
 
--- builds the config save/load ui into settings
 SaveManager:BuildConfigSection(Tabs.Settings)
 ThemeManager:ApplyToTab(Tabs.Settings)
 
--- load autoload cfg last (fires OnChanged -> applyESP)
 SaveManager:LoadAutoloadConfig()
 
 if Library and Library.KeybindFrame then
