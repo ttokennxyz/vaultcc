@@ -1114,7 +1114,8 @@ local UpdateESPObj = function(espObj, position, size, name, distanceStuds, insta
     end
 
     -- Chams logic
-    local isDead = Targeting:get_health(actor.owner.value) <= 0 --check if there are any other humanoid references here
+    local hpNow = actor and actor.owner and Targeting:get_health(actor.owner.value)
+    local isDead = type(hpNow) == "number" and hpNow <= 0
     local chamsEnabled = GetCfg("Chams.Enabled")
     if chamsEnabled and not isDead then
         local chamType = GetCfg("Chams.Type")
@@ -2242,6 +2243,9 @@ local ScanDirectories = function()
         local target = viewmodel or character
         if target and target.Parent then
             local health = Targeting:get_health(player)
+            if type(health) ~= "number" then
+                health = 100
+            end
             if health > 0 then
                 if not ESPConfig.Filter or ESPConfig.Filter(target, player) then
                     newTracked[target] = {
@@ -2400,7 +2404,8 @@ local function RuntimeStep()
             continue
         end
 
-        if Targeting:get_health(data.Actor.owner.value) <= 0 then
+        local hpNow = data.Actor and data.Actor.owner and Targeting:get_health(data.Actor.owner.value)
+        if type(hpNow) == "number" and hpNow <= 0 then
             data.espObj:Destroy()
             TrackedInstances[inst] = nil
             continue
