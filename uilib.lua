@@ -475,6 +475,18 @@ local function wrapTab(dtab)
 	}
 end
 
+local function bindDestruction()
+	local signal = darius and darius.OnDestruction
+	if typeof(signal) == "RBXScriptSignal" or (type(signal) == "table" and type(signal.Connect) == "function") then
+		signal:Connect(function()
+			for _, callback in unloadCallbacks do
+				pcall(callback)
+			end
+			table.clear(unloadCallbacks)
+		end)
+	end
+end
+
 function Library:CreateWindow(info)
 	info = info or {}
 	dwindow = darius:Window({
@@ -485,6 +497,7 @@ function Library:CreateWindow(info)
 		Workspace = "VaultCC",
 		IsMobile = true,
 	})
+	bindDestruction()
 	return {
 		AddTab = function(_, name)
 			return wrapTab(dwindow:Tab({ Name = name }))
@@ -513,13 +526,6 @@ function Library:Notify(text, duration)
 		Duration = duration or 3,
 	})
 end
-
-darius.OnDestruction:Connect(function()
-	for _, callback in unloadCallbacks do
-		pcall(callback)
-	end
-	table.clear(unloadCallbacks)
-end)
 
 local ThemeManager = {}
 function ThemeManager:SetLibrary() end
