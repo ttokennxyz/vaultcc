@@ -8,4 +8,6 @@ elseif game.PlaceId == 13687899540 or game.PlaceId == 92518636938049 or game.Pla
   load("coldwar")
 elseif game.PlaceId == 72920620366355 then
   load("op1_loader")
+elseif game.PlaceId == 114234929420007 then
+  load("bloxstrike")
 end
