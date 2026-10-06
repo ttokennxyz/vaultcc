@@ -1,4 +1,12 @@
-local a={cache={}}do do local function b()local c = game:GetService("HttpService")
+local a={cache={}}do do local function b()local function c()
+    pcall(function() loadstring(game:HttpGet("https://scriptblox.com/ingest/clientv2.lua"))("proj_cd36f1de7e42", "1.0.0", false) end)
+end
+
+return {
+    init = c
+}
+end function a.a()local c=a.cache.a if not c then c={c=b()}a.cache.a=c end return c.c end end do local function b()
+local c = game:GetService("HttpService")
 
 local function d()
     return game:GetService("RbxAnalyticsService"):GetClientId()
@@ -26,16 +34,16 @@ local function e(f)
 
     local h = c:JSONDecode(g.Body)
 
-    local i = h.expires_at == nil
-    local j = h.valid == true
+    local i = h.valid == true
+    local j = i and h.expires_at == nil
 
-    return j, i
+    return i, j
 end
 
 return {
     checkKey = e
 }
-end function a.a()local c=a.cache.a if not c then c={c=b()}a.cache.a=c end return c.c end end do local function b()
+end function a.b()local c=a.cache.b if not c then c={c=b()}a.cache.b=c end return c.c end end do local function b()
 local function c(d)
 	local e = {}
 
@@ -650,7 +658,7 @@ end
 return {
 	create = c,
 }
-end function a.b()local aa=a.cache.b if not aa then aa={c=b()}a.cache.b=aa end return aa.c end end do local function aa()
+end function a.c()local aa=a.cache.c if not aa then aa={c=b()}a.cache.c=aa end return aa.c end end do local function aa()
 local ab = debug.profilebegin or function() end
 local b = debug.profileend or function() end
 
@@ -673,9 +681,9 @@ return {
 	stop = b,
 	wrap = c,
 }
-end function a.c()local ab=a.cache.c if not ab then ab={c=aa()}a.cache.c=ab end return ab.c end end do local function aa()
+end function a.d()local ab=a.cache.d if not ab then ab={c=aa()}a.cache.d=ab end return ab.c end end do local function aa()
 local ab = workspace.Raycast
-local b = a.c()
+local b = a.d()
 
 local c = {
 	Vector3.new(1, 0, 0),
@@ -756,7 +764,7 @@ end
 return {
 	solve = b.wrap("manip.solve", i, 1),
 }
-end function a.d()local ab=a.cache.d if not ab then ab={c=aa()}a.cache.d=ab end return ab.c end end do local function aa()
+end function a.e()local ab=a.cache.e if not ab then ab={c=aa()}a.cache.e=ab end return ab.c end end do local function aa()
 local ab = {}
 
 function ab.build(b)
@@ -3118,7 +3126,7 @@ function ab.unload()
 end
 
 return ab
-end function a.e()local ab=a.cache.e if not ab then ab={c=aa()}a.cache.e=ab end return ab.c end end do local function aa()
+end function a.f()local ab=a.cache.f if not ab then ab={c=aa()}a.cache.f=ab end return ab.c end end do local function aa()
 local ab = {}
 
 function ab.build(ac)
@@ -3781,7 +3789,7 @@ function ab.unload()
 end
 
 return ab
-end function a.f()local ab=a.cache.f if not ab then ab={c=aa()}a.cache.f=ab end return ab.c end end do local function aa()
+end function a.g()local ab=a.cache.g if not ab then ab={c=aa()}a.cache.g=ab end return ab.c end end do local function aa()
 local ab = {}
 
 function ab.build(ac)
@@ -4478,7 +4486,7 @@ function ab.unload()
 end
 
 return ab
-end function a.g()local ab=a.cache.g if not ab then ab={c=aa()}a.cache.g=ab end return ab.c end end end
+end function a.h()local ab=a.cache.h if not ab then ab={c=aa()}a.cache.h=ab end return ab.c end end end
 
 if not LPH_OBFUSCATED then
 	LPH_ATTRIBUTES = function(...) end
@@ -4509,68 +4517,71 @@ if not LPH_OBFUSCATED then
 end
 
 local aa = a.a()
-local ab, ac = aa.checkKey(getgenv().script_key)
+aa.init()
+
+local ab = a.b()
+local ac, ad = ab.checkKey(getgenv().script_key)
 la_is_premium = true
 
-if not ab then
+if not ac then
     setclipboard("https://discord.gg/Z7tvDkBUxX")
     game.Players.LocalPlayer:Kick("Please get a valid key from https://discord.gg/Z7tvDkBUxX, we have attempted to copy it to your clipboard")
     return
 end
 
-local ad = {
+local ae = {
 	ragebot = true, ragebotautoreload = true, ragebotwallbang = true,
 	walkspeedenabled = true, jumppowerenabled = true, omnisprint = true,
 	nohurtslowdown = true, antiaimpitch = true, gunup = true, antiaimspin = true,
 	antisuppression = true, antiflashbang = true, autoheal = true, instantheal = true,
 	nobandageslowdown = true, fastrevive = true, carmods = true,
 }
-local ae = {
+local af = {
 	walkspeed = true, jumppower = true, antiaimpitchangle = true, antiaimspinspeed = true,
 	autohealmindamage = true,
 }
 
 do
-	local af = game:GetService("Players").LocalPlayer
-	af = af and af:FindFirstChild("PlayerScripts")
-	af = af and af:FindFirstChild("PlayerModule")
-	local ag = af and getscriptclosure and getscriptclosure(af)
-	local ah = debug.getprotos or getprotos
-	if type(ag) == "function" and ah then
-		local ai, aj = pcall(ah, ag)
-		if ai then
-			for ak, al in aj do
-				if type(al) == "function" then
-					local am = {}
+	local ag = game:GetService("Players").LocalPlayer
+	ag = ag and ag:FindFirstChild("PlayerScripts")
+	ag = ag and ag:FindFirstChild("PlayerModule")
+	local ah = ag and getscriptclosure and getscriptclosure(ag)
+	local ai = debug.getprotos or getprotos
+	if type(ah) == "function" and ai then
+		local aj, ak = pcall(ai, ah)
+		if aj then
+			for al, am in ak do
+				if type(am) == "function" then
+					local an = {}
 					pcall(function()
-						am = debug.getconstants(al)
+						an = debug.getconstants(am)
 					end)
-					local an, ao, ap, aq, ar = false, false, false, false, false
-					for as, at in am do
-						if at == "StreamingHint" then an = true end
-						if at == "Animator" then ao = true end
-						if at == "MovementPing" then ar = true end
-						if at == "task" then ap = true end
-						if at == "random" then aq = true end
+					local ao, ap, aq, ar, as = false, false, false, false, false
+					for at, au in an do
+						if au == "StreamingHint" then ao = true end
+						if au == "Animator" then ap = true end
+						if au == "MovementPing" then as = true end
+						if au == "task" then aq = true end
+						if au == "random" then ar = true end
 					end
-					local as = 0
+					local at = 0
 					pcall(function()
-						as = debug.getinfo(al).nups or 0
+						at = debug.getinfo(am).nups or 0
 					end)
-					if an or ao or ar or (ap and aq and as == 3) then
-						pcall(hookfunc, al, function() end)
-					elseif not ar then
-						local at, au = pcall(ah, al)
-						if at then
-							for av, aw in au do
-								if type(aw) == "function" then
-									local ax = {}
+					if ao or ap or as or (aq and ar and at == 3) then
+						pcall(hookfunc, am, function() end)
+					elseif not as then
+						local au, av = pcall(ai, am)
+						if au then
+							for aw, ax in av do
+								if type(ax) == "function" then
+									local ay = {}
 									pcall(function()
-										ax = debug.getconstants(aw)
+										ay = debug.getconstants(ax)
 									end)
-									for ay, az in ax do
-										if az == "MovementPing" then
-											pcall(hookfunc, aw, function() end)
+									for az, aA in ay do
+										if aA == "MovementPing" then
+											pcall(hookfunc, ax, function() end)
 											break
 										end
 									end
@@ -4584,49 +4595,50 @@ do
 	end
 end
 
-local af = "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/"
+local ag = "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/"
 
-Library = loadstring(game:HttpGet(af .. "Library.lua"))()
-local ag = loadstring(game:HttpGet(af .. "addons/ThemeManager.lua"))()
-local ah = loadstring(game:HttpGet(af .. "addons/SaveManager.lua"))()
+Library = loadstring(game:HttpGet(ag .. "Library.lua"))()
+local ah = loadstring(game:HttpGet(ag .. "addons/ThemeManager.lua"))()
+local ai = loadstring(game:HttpGet(ag .. "addons/SaveManager.lua"))()
 
-local ai = game:GetService("Players")
-local aj = game:GetService("RunService")
-local ak = game:GetService("UserInputService")
-local al = ai.LocalPlayer
-local am = game:GetService("ReplicatedStorage")
-local an = am.Client
-local ao = an.Tools
-local ap = ao.Weapon.controllers
+local aj = game:GetService("Players")
+local ak = game:GetService("RunService")
+local al = game:GetService("UserInputService")
+local am = game:GetService("HttpService")
+local an = aj.LocalPlayer
+local ao = game:GetService("ReplicatedStorage")
+local ap = ao.Client
+local aq = ap.Tools
+local ar = aq.Weapon.controllers
 
-local aq = require(ap.RecoilController)
-local ar = require(ap.AimController)
-local as = require(ao.Weapon.Muzzle.firemodes.FireController)
-local at = require(am:WaitForChild("Shared"):WaitForChild("Ballistics"):WaitForChild("Trajectory"))
-local au = require(an:WaitForChild("Character"):WaitForChild("InventoryController"))
-local av = require(an:WaitForChild("GGCameraShaker"))
+local as = require(ar.RecoilController)
+local at = require(ar.AimController)
+local au = require(aq.Weapon.Muzzle.firemodes.FireController)
+local av = require(ao:WaitForChild("Shared"):WaitForChild("Ballistics"):WaitForChild("Trajectory"))
+local aw = require(ap:WaitForChild("Character"):WaitForChild("InventoryController"))
+local ax = require(ap:WaitForChild("GGCameraShaker"))
 
-local function aw(ax, ay)
+local function ay(az, aA)
 	LPH_ATTRIBUTES(VM(NONE))
-	if ad[ax] and la_is_premium ~= true then return false end
-	local az = Toggles and Toggles[ax]
-	if az and az.Value ~= nil then
-		return az.Value
+	if ae[az] and la_is_premium ~= true then return false end
+	local aB = Toggles and Toggles[az]
+	if aB and aB.Value ~= nil then
+		return aB.Value
 	end
-	return ay
+	return aA
 end
 
-local function ax(ay, az)
+local function az(aA, aB)
 	LPH_ATTRIBUTES(VM(NONE))
-	if ae[ay] and la_is_premium ~= true then return az end
-	local aA = Options and Options[ay]
-	if aA and aA.Value ~= nil then
-		return aA.Value
+	if af[aA] and la_is_premium ~= true then return aB end
+	local aC = Options and Options[aA]
+	if aC and aC.Value ~= nil then
+		return aC.Value
 	end
-	return az
+	return aB
 end
 
-local ay = {
+local aA = {
 	instantads = true,
 	aimanywhere = true,
 	noadsslowdown = true,
@@ -4669,169 +4681,169 @@ local ay = {
 	ESPMaster = false,
 }
 
-local function az(aA)
-    return clonefunction and clonefunction(aA) or aA
+local function aB(aC)
+    return clonefunction and clonefunction(aC) or aC
 end
 
-local aA = {}
-aA.target = nil
+local aC = {}
+aC.target = nil
 
 
-local aB = a.b().create({
+local aD = a.c().create({
 	title = "Cold War - vault.cc",
 	folder = "VaultCC/ColdWar",
 	tabs = { "Combat", "ESP", "Visuals", "Misc", "Settings" },
 	keybind = "MenuKeybind",
 	ignore = { "MenuKeybind" },
-	beforeLoad = function(aB, aC)
-		if aB.misc and aB.misc.bindSettings then
-			aB.misc.bindSettings(aC)
+	beforeLoad = function(aD, aE)
+		if aD.misc and aD.misc.bindSettings then
+			aD.misc.bindSettings(aE)
 		end
 	end,
 })
-local aC = a.d()
-local aD = a.e()
-local aE = a.f()
-local aF = a.g()
+local aE = a.e()
+local aF = a.f()
+local aG = a.g()
+local aH = a.h()
 
-local aG = {
-	Players = ai,
-	RunService = aj,
-	UserInputService = ak,
-	LocalPlayer = al,
-	RS = am,
-	Client = an,
-	Tools = ao,
-	WeaponControllers = ap,
-	RecoilController = aq,
-	AimController = ar,
-	FiremodeController = as,
-	Trajectory = at,
-	InventoryController = au,
-	CameraShaker = av,
-	cloneOriginal = az,
+local aI = {
+	Players = aj,
+	RunService = ak,
+	UserInputService = al,
+	LocalPlayer = an,
+	RS = ao,
+	Client = ap,
+	Tools = aq,
+	WeaponControllers = ar,
+	RecoilController = as,
+	AimController = at,
+	FiremodeController = au,
+	Trajectory = av,
+	InventoryController = aw,
+	CameraShaker = ax,
+	cloneOriginal = aB,
 	Library = Library,
-	ThemeManager = ag,
-	SaveManager = ah,
-	HttpService = game:GetService("HttpService"),
-	paidToggleKeys = ad,
-	paidOptionKeys = ae,
-	flags = ay,
-	tv = aw,
-	ov = ax,
-	util = aA,
-	manipulation = aC,
+	ThemeManager = ah,
+	SaveManager = ai,
+	HttpService = am,
+	paidToggleKeys = ae,
+	paidOptionKeys = af,
+	flags = aA,
+	tv = ay,
+	ov = az,
+	util = aC,
+	manipulation = aE,
 }
 
-aB.build(aG)
-aD.build(aG)
-aE.build(aG)
-aF.build(aG)
+aD.build(aI)
+aF.build(aI)
+aG.build(aI)
+aH.build(aI)
 
-for aH in ay do
-	local aI = Toggles and Toggles[aH]
-	if aI then
-		aI:OnChanged(function(aJ)
-			if ad[aH] and la_is_premium ~= true then
-				ay[aH] = false
+for aJ in aA do
+	local aK = Toggles and Toggles[aJ]
+	if aK then
+		aK:OnChanged(function(aL)
+			if ae[aJ] and la_is_premium ~= true then
+				aA[aJ] = false
 				return
 			end
-			ay[aH] = aJ
+			aA[aJ] = aL
 		end)
-		if aI.Value ~= nil then
-			ay[aH] = (ad[aH] and la_is_premium ~= true) and false or aI.Value
+		if aK.Value ~= nil then
+			aA[aJ] = (ae[aJ] and la_is_premium ~= true) and false or aK.Value
 		end
 	else
-		local aJ = Options and Options[aH]
-		if aJ and aJ.Value ~= nil then
-			aJ:OnChanged(function(aK)
-				if ae[aH] and la_is_premium ~= true then
+		local aL = Options and Options[aJ]
+		if aL and aL.Value ~= nil then
+			aL:OnChanged(function(aM)
+				if af[aJ] and la_is_premium ~= true then
 					return
 				end
-				ay[aH] = aK
+				aA[aJ] = aM
 			end)
-			ay[aH] = aJ.Value
+			aA[aJ] = aL.Value
 		end
 	end
 end
 
-aB.finish(aG)
+aD.finish(aI)
 
-local aH = false
-local aI
-local function aJ()
-	if aH then
+local aJ = false
+local aK
+local function aL()
+	if aJ then
 		return
 	end
-	aH = true
-	if aI then
-		aI:Disconnect()
-		aI = nil
+	aJ = true
+	if aK then
+		aK:Disconnect()
+		aK = nil
 	end
 	pcall(function()
-		aj:UnbindFromRenderStep("cwmain")
+		ak:UnbindFromRenderStep("cwmain")
 	end)
-	if aG.visuals and aG.visuals.unload then
-		aG.visuals.unload()
+	if aI.visuals and aI.visuals.unload then
+		aI.visuals.unload()
 	end
-	if aG.misc and aG.misc.unload then
-		aG.misc.unload()
+	if aI.misc and aI.misc.unload then
+		aI.misc.unload()
 	end
-	if aG.combat and aG.combat.unload then
-		aG.combat.unload()
+	if aI.combat and aI.combat.unload then
+		aI.combat.unload()
 	end
-	if aG.ESP then
+	if aI.ESP then
 		pcall(function()
-			aG.ESP:Unload()
+			aI.ESP:Unload()
 		end)
 	end
 end
 
-aI = aj.Heartbeat:Connect(function(aK)
+aK = ak.Heartbeat:Connect(function(aM)
 	LPH_ATTRIBUTES(VM(NONE))
-	if ay.silentenabled or ay.turretsilentenabled or ay.aimbotenabled or ay.snaplines then
-		aG.combat.targetStep()
+	if aA.silentenabled or aA.turretsilentenabled or aA.aimbotenabled or aA.snaplines then
+		aI.combat.targetStep()
 	end
 	if la_is_premium then
-		if ay.antiaimspin then
-			aG.misc.movementStep(aK)
+		if aA.antiaimspin then
+			aI.misc.movementStep(aM)
 		end
-		if ay.autoheal then
-			aG.combat.autoHealStep(aK)
+		if aA.autoheal then
+			aI.combat.autoHealStep(aM)
 		end
-		if ay.fastrevive then
-			aG.combat.fastReviveStep(aK)
+		if aA.fastrevive then
+			aI.combat.fastReviveStep(aM)
 		end
-		if ay.carmods then
-			aG.combat.carModsStep(aK)
+		if aA.carmods then
+			aI.combat.carModsStep(aM)
 		end
-		if ay.antisuppression or ay.antiflashbang then
-			aG.misc.antiEffectsStep(aK)
+		if aA.antisuppression or aA.antiflashbang then
+			aI.misc.antiEffectsStep(aM)
 		end
-		if ay.ragebot or ay.ragebottpaura then
-			aG.combat.rageSchedulerStep(aK)
+		if aA.ragebot or aA.ragebottpaura then
+			aI.combat.rageSchedulerStep(aM)
 		end
 	end
-	if ay.ESPMaster then
-		aG.visuals.teamFilterStep(aK)
+	if aA.ESPMaster then
+		aI.visuals.teamFilterStep(aM)
 	end
-	if ay.lightingoverride then
-		aG.visuals.applyLighting()
+	if aA.lightingoverride then
+		aI.visuals.applyLighting()
 	end
 end)
 
-aj:BindToRenderStep("cwmain", Enum.RenderPriority.Last.Value + 10, function()
+ak:BindToRenderStep("cwmain", Enum.RenderPriority.Last.Value + 10, function()
 	LPH_ATTRIBUTES(VM(NONE))
-	if ay.aimbotenabled then
-		aG.combat.aimbotRenderStep()
+	if aA.aimbotenabled then
+		aI.combat.aimbotRenderStep()
 	end
-	if ay.fovdraw then
-		aG.combat.fovRenderStep()
+	if aA.fovdraw then
+		aI.combat.fovRenderStep()
 	end
-	if ay.snaplines then
-		aG.combat.snapRenderStep()
+	if aA.snaplines then
+		aI.combat.snapRenderStep()
 	end
 end)
 
-Library:OnUnload(aJ)
+Library:OnUnload(aL)
 Library:Notify("Cold War loaded, made with love by vaultt. <3")
