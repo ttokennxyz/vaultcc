@@ -1,49 +1,101 @@
-local a={cache={}}do do local function b()local function c()
-    pcall(function() loadstring(game:HttpGet("https://scriptblox.com/ingest/clientv2.lua"))("proj_cd36f1de7e42", "1.0.0", false) end)
+local a={cache={}}do do local function b()local function c(d)
+	return clonefunction and clonefunction(d) or d
+end
+
+local function d(e)
+	return e
+end
+
+
+local e = {}
+
+local function f(g, h)
+	if type(g) ~= "function" or not hookfunction then
+		return nil
+	end
+	local i = hookfunction(g, h)
+	e[#e + 1] = { target = g, original = i }
+	return i
+end
+
+local function g()
+	for h = #e, 1, -1 do
+		local i = e[h]
+		pcall(function()
+			if restorefunction then
+				restorefunction(i.target)
+			else
+				hookfunction(i.target, i.original)
+			end
+		end)
+		e[h] = nil
+	end
+end
+
+local function h(i, j)
+	local k
+	if filtergc then
+		local l = filtergc("function", { Name = i, IgnoreExecutor = true }, false)
+		if type(l) == "table" then
+			for m, n in l do
+				if type(n) == "function" then
+					local o = debug.info(n, "s")
+					if not j or (o and string.find(o, j, 1, true)) then
+						return n
+					end
+				end
+			end
+		elseif type(l) == "function" then
+			return l
+		end
+	end
+	for l, m in getgc(false) do
+		if type(m) == "function" and islclosure(m) and not (isexecutorclosure and isexecutorclosure(m)) and debug.info(m, "n") == i then
+			local n = debug.info(m, "s")
+			if not j or (n and string.find(n, j, 1, true)) then
+				k = m
+				break
+			end
+		end
+	end
+	return k
+end
+
+
+local function i(j)
+	local k = {}
+	local l = 0
+	for m in j do
+		l += 1
+	end
+	for m, n in getgc(false) do
+		if l == 0 then
+			break
+		end
+		if type(n) == "function" and islclosure(n) then
+			local o = debug.info(n, "n")
+			local p = o and j[o]
+			if p and not k[o] and not (isexecutorclosure and isexecutorclosure(n)) then
+				local q = debug.info(n, "s")
+				if q and string.find(q, p, 1, true) then
+					k[o] = n
+					l -= 1
+				end
+			end
+		end
+	end
+	return k
 end
 
 return {
-    init = c
+	cloneOriginal = c,
+	wrap = d,
+	hook = f,
+	restoreAll = g,
+	findGcFunction = h,
+	findGcFunctions = i,
 }
 end function a.a()local c=a.cache.a if not c then c={c=b()}a.cache.a=c end return c.c end end do local function b()
-local c = game:GetService("HttpService")
-
-local function d()
-    return game:GetService("RbxAnalyticsService"):GetClientId()
-end
-
-gethwid = gethwid or d
-
-local function e(f)
-    if not LPH_OBFUSCATED then
-        return true, true
-    end
-
-    local g = request({
-        Url = "https://auth.rbxkey.store/api/auth/verify",
-        Method = "POST",
-        Headers = {
-            ["Content-Type"] = "application/json"
-        },
-        Body = c:JSONEncode({
-            key = f or nil,
-            executor = identifyexecutor(),
-            fingerprint = gethwid()
-        })
-    })
-
-    local h = c:JSONDecode(g.Body)
-
-    local i = h.valid == true
-    local j = i and h.expires_at == nil
-
-    return i, j
-end
-
-return {
-    checkKey = e
-}
-end function a.b()local c=a.cache.b if not c then c={c=b()}a.cache.b=c end return c.c end end do local function b()
 local function c(d)
 	local e = {}
 
@@ -64,564 +116,566 @@ local function c(d)
 	end
 
 	function e.finish(f)
-		local g = f.Tabs
-		local h = f.Library
-		local i = f.ThemeManager
-		local j = f.SaveManager
-		local k = g.Settings or g["UI Settings"]
-		if not k then
+		local g = getgenv().Toggles
+		local h = getgenv().Options
+		local i = f.Tabs
+		local j = f.Library
+		local k = f.ThemeManager
+		local l = f.SaveManager
+		local m = i.Settings or i["UI Settings"]
+		if not m then
 			return
 		end
-		local l = d.keybind or "menubind"
-		local m = k:AddLeftGroupbox("Menu")
-		m:AddButton({
+		local n = d.keybind or "menubind"
+		local o = m:AddLeftGroupbox("Menu")
+		o:AddButton({
 			Text = "Unload",
 			Func = function()
-				h:Unload()
+				j:Unload()
 			end,
 		})
-		m:AddLabel("Menu keybind"):AddKeyPicker(l, {
+		o:AddLabel("Menu keybind"):AddKeyPicker(n, {
 			Default = d.keybindDefault or "RightShift",
 			NoUI = true,
 			Text = "Menu keybind",
 		})
-		h.ToggleKeybind = Options[l]
+		j.ToggleKeybind = h[n]
 		if not d.hideKeybindList then
-			m
+			o
 				:AddToggle("ShowKeybindList", { Text = "Show Keybind List", Default = true })
-				:OnChanged(function(n)
-					if h and h.KeybindFrame then
-						h.KeybindFrame.Visible = n
+				:OnChanged(function(p)
+					if j and j.KeybindFrame then
+						j.KeybindFrame.Visible = p
 					end
 				end)
 		end
-		i:SetLibrary(h)
-		j:SetLibrary(h)
-		if j.Parser and j.Parser.Slider then
-			local n = j.Parser.Slider.Load
-			j.Parser.Slider.Load = function(o, p)
-				if Options[o] then
-					Options[o]:SetValue(tonumber(p.value) or p.value)
-				elseif n then
-					n(o, p)
+		k:SetLibrary(j)
+		l:SetLibrary(j)
+		if l.Parser and l.Parser.Slider then
+			local p = l.Parser.Slider.Load
+			l.Parser.Slider.Load = function(q, r)
+				if h[q] then
+					h[q]:SetValue(tonumber(r.value) or r.value)
+				elseif p then
+					p(q, r)
 				end
 			end
 		end
-		j:IgnoreThemeSettings()
-		j:SetIgnoreIndexes(d.ignore or { l })
-		i:SetFolder("VaultCC")
-		j:SetFolder(d.folder)
-		j:BuildConfigSection(k)
-		local n = game:GetService("HttpService")
-		local o
-		local function p(q)
-			return q == "VaultConfigCode" or q:find("SaveManager_") or q:find("ThemeManager_")
-		end
-		local function q(r)
-			if r and r.Changed then
-				pcall(r.Changed, r.Value)
-			end
-		end
-		local function r(s, t)
-			if not s then
-				return false
-			end
-			local u = false
-			if s.SetValue then
-				u = pcall(function()
-					s:SetValue(t)
-				end)
-			end
-			if not u then
-				s.Value = t
-			end
-			q(s)
-			return true
+		l:IgnoreThemeSettings()
+		l:SetIgnoreIndexes(d.ignore or { n })
+		k:SetFolder("VaultCC")
+		l:SetFolder(d.folder)
+		l:BuildConfigSection(m)
+		local p = game:GetService("HttpService")
+		local q
+		local function r(s)
+			return s == "VaultConfigCode" or s:find("SaveManager_") or s:find("ThemeManager_")
 		end
 		local function s(t)
-			local u = 0
-			if type(t) ~= "table" then
-				return 0
+			if t and t.Changed then
+				pcall(t.Changed, t.Value)
 			end
-			for v, w in t do
-				if type(v) ~= "string" or p(v) then
-					continue
-				end
-				local x = Toggles[v]
-				if x and type(w) == "table" and w.boolean ~= nil then
-					if r(x, w.boolean == true) then
-						u += 1
-					end
-					continue
-				end
-				local y = Options[v]
-				if not y then
-					continue
-				end
-				if y.Type == "ColorPicker" and type(w) == "table" and type(w.color) == "string" then
-					local z, A = pcall(Color3.fromHex, w.color)
-					if z then
-						if y.SetValueRGB then
-							pcall(function()
-								y:SetValueRGB(A, w.transparency)
-							end)
-						end
-						y.Value = A
-						q(y)
-						u += 1
-					end
-				elseif y.Type == "KeyPicker" and type(w) == "table" then
-					if r(y, { w.keycode or w.key or y.Value, y.Mode }) then
-						u += 1
-					end
-				elseif y.Type == "Slider" then
-					if r(y, tonumber(w) or w) then
-						u += 1
-					end
-				elseif r(y, w) then
-					u += 1
-				end
-			end
-			return u
 		end
-		local function t(u)
-			if type(u) ~= "table" or type(u.idx) ~= "string" or p(u.idx) then
+		local function t(u, v)
+			if not u then
 				return false
 			end
-			local v = j.Parser and j.Parser[u.type]
-			if v and v.Load then
-				local w = pcall(function()
-					v.Load(u.idx, u)
+			local w = false
+			if u.SetValue then
+				w = pcall(function()
+					u:SetValue(v)
 				end)
-				if w then
+			end
+			if not w then
+				u.Value = v
+			end
+			s(u)
+			return true
+		end
+		local function u(v)
+			local w = 0
+			if type(v) ~= "table" then
+				return 0
+			end
+			for x, y in v do
+				if type(x) ~= "string" or r(x) then
+					continue
+				end
+				local z = g[x]
+				if z and type(y) == "table" and y.boolean ~= nil then
+					if t(z, y.boolean == true) then
+						w += 1
+					end
+					continue
+				end
+				local A = h[x]
+				if not A then
+					continue
+				end
+				if A.Type == "ColorPicker" and type(y) == "table" and type(y.color) == "string" then
+					local B, C = pcall(Color3.fromHex, y.color)
+					if B then
+						if A.SetValueRGB then
+							pcall(function()
+								A:SetValueRGB(C, y.transparency)
+							end)
+						end
+						A.Value = C
+						s(A)
+						w += 1
+					end
+				elseif A.Type == "KeyPicker" and type(y) == "table" then
+					if t(A, { y.keycode or y.key or A.Value, A.Mode }) then
+						w += 1
+					end
+				elseif A.Type == "Slider" then
+					if t(A, tonumber(y) or y) then
+						w += 1
+					end
+				elseif t(A, y) then
+					w += 1
+				end
+			end
+			return w
+		end
+		local function v(w)
+			if type(w) ~= "table" or type(w.idx) ~= "string" or r(w.idx) then
+				return false
+			end
+			local x = l.Parser and l.Parser[w.type]
+			if x and x.Load then
+				local y = pcall(function()
+					x.Load(w.idx, w)
+				end)
+				if y then
 					return true
 				end
 			end
-			if u.type == "Toggle" then
-				return r(Toggles[u.idx], u.value == true)
+			if w.type == "Toggle" then
+				return t(g[w.idx], w.value == true)
 			end
-			if u.type == "Slider" then
-				return r(Options[u.idx], tonumber(u.value) or u.value)
+			if w.type == "Slider" then
+				return t(h[w.idx], tonumber(w.value) or w.value)
 			end
-			if u.type == "Dropdown" then
-				return r(Options[u.idx], u.value)
+			if w.type == "Dropdown" then
+				return t(h[w.idx], w.value)
 			end
-			if u.type == "ColorPicker" then
-				local w = Options[u.idx]
-				local x, y = pcall(Color3.fromHex, u.value)
-				if not x or not w then
+			if w.type == "ColorPicker" then
+				local y = h[w.idx]
+				local z, A = pcall(Color3.fromHex, w.value)
+				if not z or not y then
 					return false
 				end
-				if w.SetValueRGB then
+				if y.SetValueRGB then
 					pcall(function()
-						w:SetValueRGB(y, u.transparency)
+						y:SetValueRGB(A, w.transparency)
 					end)
 				end
-				w.Value = y
-				q(w)
+				y.Value = A
+				s(y)
 				return true
 			end
-			if u.type == "KeyPicker" then
-				return r(Options[u.idx], { u.key, u.mode })
+			if w.type == "KeyPicker" then
+				return t(h[w.idx], { w.key, w.mode })
 			end
-			if u.type == "Input" then
-				return r(Options[u.idx], u.text)
+			if w.type == "Input" then
+				return t(h[w.idx], w.text)
 			end
 			return false
 		end
-		local function u()
-			local v = {}
-			for w, x in Toggles do
-				if not p(w) then
-					v[#v + 1] = { type = "Toggle", idx = w, value = x.Value == true }
+		local function w()
+			local x = {}
+			for y, z in g do
+				if not r(y) then
+					x[#x + 1] = { type = "Toggle", idx = y, value = z.Value == true }
 				end
 			end
-			for w, x in Options do
-				if p(w) then
+			for y, z in h do
+				if r(y) then
 					continue
 				end
-				if x.Type == "Slider" then
-					v[#v + 1] = { type = "Slider", idx = w, value = tostring(x.Value) }
-				elseif x.Type == "Dropdown" then
-					v[#v + 1] = { type = "Dropdown", idx = w, value = x.Value, mutli = x.Multi }
-				elseif x.Type == "ColorPicker" then
-					local y = x.Value
-					v[#v + 1] = {
+				if z.Type == "Slider" then
+					x[#x + 1] = { type = "Slider", idx = y, value = tostring(z.Value) }
+				elseif z.Type == "Dropdown" then
+					x[#x + 1] = { type = "Dropdown", idx = y, value = z.Value, mutli = z.Multi }
+				elseif z.Type == "ColorPicker" then
+					local A = z.Value
+					x[#x + 1] = {
 						type = "ColorPicker",
-						idx = w,
-						value = typeof(y) == "Color3" and y:ToHex() or tostring(y),
-						transparency = x.Transparency,
+						idx = y,
+						value = typeof(A) == "Color3" and A:ToHex() or tostring(A),
+						transparency = z.Transparency,
 					}
-				elseif x.Type == "KeyPicker" then
-					v[#v + 1] = { type = "KeyPicker", idx = w, mode = x.Mode, key = x.Value }
-				elseif x.Type == "Input" then
-					v[#v + 1] = { type = "Input", idx = w, text = tostring(x.Value or "") }
+				elseif z.Type == "KeyPicker" then
+					x[#x + 1] = { type = "KeyPicker", idx = y, mode = z.Mode, key = z.Value }
+				elseif z.Type == "Input" then
+					x[#x + 1] = { type = "Input", idx = y, text = tostring(z.Value or "") }
 				end
 			end
-			return n:JSONEncode({ vault = 1, objects = v })
+			return p:JSONEncode({ vault = 1, objects = x })
 		end
-		local function v(w)
-			if type(w) ~= "string" then
+		local function x(y)
+			if type(y) ~= "string" then
 				return false, "empty"
 			end
-			w = w:match("^%s*(.-)%s*$") or ""
-			if w == "" then
+			y = y:match("^%s*(.-)%s*$") or ""
+			if y == "" then
 				return false, "empty"
 			end
-			local x, y = pcall(function()
-				return n:JSONDecode(w)
+			local z, A = pcall(function()
+				return p:JSONDecode(y)
 			end)
-			if not x or type(y) ~= "table" then
+			if not z or type(A) ~= "table" then
 				return false, "invalid json"
 			end
-			local z = 0
-			if type(y.flagValues) == "table" then
-				z = s(y.flagValues)
+			local B = 0
+			if type(A.flagValues) == "table" then
+				B = u(A.flagValues)
 			end
-			local A = y.objects or y
-			if z == 0 and type(A) == "table" then
-				for B, C in A do
-					if t(C) then
-						z += 1
+			local C = A.objects or A
+			if B == 0 and type(C) == "table" then
+				for D, E in C do
+					if v(E) then
+						B += 1
 					end
 				end
 			end
-			if z == 0 then
+			if B == 0 then
 				return false, "no settings in that code"
 			end
-			return true, z
+			return true, B
 		end
-		local w = 0
-		local function x()
-			local y = os.clock()
-			if y - w < 0.35 then
+		local y = 0
+		local function z()
+			local A = os.clock()
+			if A - y < 0.35 then
 				return false
 			end
-			w = y
+			y = A
 			return true
 		end
-		local function y()
-			if not x() then
+		local function A()
+			if not z() then
 				return
 			end
-			local z = u()
-			if o then
-				o.Text = z
+			local B = w()
+			if q then
+				q.Text = B
 			end
-			if Options.VaultConfigCode and Options.VaultConfigCode.SetValue then
+			if h.VaultConfigCode and h.VaultConfigCode.SetValue then
 				pcall(function()
-					Options.VaultConfigCode:SetValue(z)
+					h.VaultConfigCode:SetValue(B)
 				end)
 			end
-			local A = false
+			local C = false
 			pcall(function()
-				setclipboard(z)
-				A = true
+				setclipboard(B)
+				C = true
 			end)
-			h:Notify(A and "Config copied" or "Config ready, copy the box")
+			j:Notify(C and "Config copied" or "Config ready, copy the box")
 		end
-		local function z(A)
-			if not x() then
+		local function B(C)
+			if not z() then
 				return
 			end
-			if type(A) ~= "string" or A:match("^%s*(.-)%s*$") == "" then
-				local B = ""
+			if type(C) ~= "string" or C:match("^%s*(.-)%s*$") == "" then
+				local D = ""
 				pcall(function()
-					B = getclipboard()
+					D = getclipboard()
 				end)
-				if B == "" then
+				if D == "" then
 					pcall(function()
-						B = clipboard()
+						D = clipboard()
 					end)
 				end
-				A = B
+				C = D
 			end
-			local B, C = v(A)
-			if not B then
-				h:Notify("Import failed: " .. tostring(C))
+			local D, E = x(C)
+			if not D then
+				j:Notify("Import failed: " .. tostring(E))
 				return
 			end
-			h:Notify("Imported " .. tostring(C) .. " settings")
+			j:Notify("Imported " .. tostring(E) .. " settings")
 		end
-		local A = k:AddLeftGroupbox("Import / Export")
-		A:AddInput("VaultConfigCode", {
+		local C = m:AddLeftGroupbox("Import / Export")
+		C:AddInput("VaultConfigCode", {
 			Text = "Config code",
 			Placeholder = "Paste a config here",
 			PlaceholderText = "Paste a config here",
 		})
-		A:AddButton({
+		C:AddButton({
 			Text = "Export",
-			Func = y,
+			Func = A,
 		})
-		A:AddButton({
+		C:AddButton({
 			Text = "Import",
 			Func = function()
-				z(Options.VaultConfigCode and Options.VaultConfigCode.Value or "")
+				B(h.VaultConfigCode and h.VaultConfigCode.Value or "")
 			end,
 		})
 		pcall(function()
-			j:SetIgnoreIndexes({ "VaultConfigCode" })
+			l:SetIgnoreIndexes({ "VaultConfigCode" })
 		end)
-		if h.IsMobile then
-			local B = game:GetService("GuiService")
-			local C = game:GetService("UserInputService")
-			local D
-			local E = {}
-			local function F(G)
-				local H = G
-				while H and H ~= game do
-					if H:IsA("GuiObject") and not H.Visible then
+		if j.IsMobile then
+			local D = game:GetService("GuiService")
+			local E = game:GetService("UserInputService")
+			local F
+			local G = {}
+			local function H(I)
+				local J = I
+				while J and J ~= game do
+					if J:IsA("GuiObject") and not J.Visible then
 						return false
 					end
-					H = H.Parent
+					J = J.Parent
 				end
-				return G and G.Parent ~= nil
-			end
-			local function G(H)
-				local I, J
-				for K, L in E do
-					if F(K) then
-						local M, N = K.AbsolutePosition, K.AbsoluteSize
-						if N.X > 0 and N.Y > 0 and H.X >= M.X and H.X <= M.X + N.X and H.Y >= M.Y and H.Y <= M.Y + N.Y then
-							local O = M + N / 2
-							local P = (Vector2.new(O.X, O.Y) - H).Magnitude
-							if not J or P < J then
-								I, J = L, P
-							end
-						end
-					end
-				end
-				return I
-			end
-			local function H(I)
-				if type(I) ~= "string" or I == "" or not isfolder("darius/VaultCC") then
-					return nil
-				end
-				for J, K in listfiles("darius/VaultCC") do
-					local L, M = pcall(function()
-						return n:JSONDecode(readfile(K))
-					end)
-					if L and type(M) == "table" and M.name == I then
-						return M
-					end
-				end
-				return nil
+				return I and I.Parent ~= nil
 			end
 			local function I(J)
-				local K = H(J)
-				if not K then
-					h:Notify("Config not found")
+				local K, L
+				for M, N in G do
+					if H(M) then
+						local O, P = M.AbsolutePosition, M.AbsoluteSize
+						if P.X > 0 and P.Y > 0 and J.X >= O.X and J.X <= O.X + P.X and J.Y >= O.Y and J.Y <= O.Y + P.Y then
+							local Q = O + P / 2
+							local R = (Vector2.new(Q.X, Q.Y) - J).Magnitude
+							if not L or R < L then
+								K, L = N, R
+							end
+						end
+					end
+				end
+				return K
+			end
+			local function J(K)
+				if type(K) ~= "string" or K == "" or not isfolder("darius/VaultCC") then
+					return nil
+				end
+				for L, M in listfiles("darius/VaultCC") do
+					local N, O = pcall(function()
+						return p:JSONDecode(readfile(M))
+					end)
+					if N and type(O) == "table" and O.name == K then
+						return O
+					end
+				end
+				return nil
+			end
+			local function K(L)
+				local M = J(L)
+				if not M then
+					j:Notify("Config not found")
 					return
 				end
-				local L = getgenv and getgenv().dariusInstance
-				if L and K.uid and L.SetConfiguration then
+				local N = getgenv and getgenv().dariusInstance
+				if N and M.uid and N.SetConfiguration then
 					pcall(function()
-						L:SetConfiguration(K.uid)
+						N:SetConfiguration(M.uid)
 					end)
 				end
-				s(K.flagValues)
-				h:Notify("Loaded " .. J)
+				u(M.flagValues)
+				j:Notify("Loaded " .. L)
 			end
-			local function J()
-				local K = game:GetService("CoreGui")
-				for L, M in K:GetDescendants() do
-					if M:IsA("TextLabel") then
-						local N = M.Text:match("^Configs:%s*(.+)$")
-						if N and N ~= "" then
-							return N
+			local function L()
+				local M = game:GetService("CoreGui")
+				for N, O in M:GetDescendants() do
+					if O:IsA("TextLabel") then
+						local P = O.Text:match("^Configs:%s*(.+)$")
+						if P and P ~= "" then
+							return P
 						end
 					end
 				end
 				return nil
 			end
-			local function K()
-				if not x() then
-					return
-				end
-				local L = D or J()
-				if not L or L == "" then
-					h:Notify("Select a config first")
-					return
-				end
-				I(L)
-			end
-			if not h._vaultCfgHook then
-				h._vaultCfgHook = true
-				local L
-				C.InputBegan:Connect(function(M)
-					local N = M.UserInputType
-					if N == Enum.UserInputType.Touch or N == Enum.UserInputType.MouseButton1 then
-						L = M.Position
-					end
-				end)
-				C.InputEnded:Connect(function(M)
-					local N = M.UserInputType
-					if N ~= Enum.UserInputType.Touch and N ~= Enum.UserInputType.MouseButton1 then
-						return
-					end
-					if not L or (M.Position - L).Magnitude > 18 then
-						return
-					end
-					local O = Vector2.new(M.Position.X, M.Position.Y)
-					local P = B:GetGuiInset()
-					local Q = G(O) or G(O - P) or G(O + P)
-					if Q then
-						Q()
-					end
-				end)
-			end
-			local function L(M, N)
-				if not M or E[M] then
-					return
-				end
-				E[M] = N
-			end
 			local function M()
-				local N = game:GetService("CoreGui")
-				local O = UDim2.new(1, 0, 0, 36)
-				local function P(Q)
-					if Q:IsA("TextButton") and Q.Text ~= "" then
-						return Q.Text
+				if not z() then
+					return
+				end
+				local N = F or L()
+				if not N or N == "" then
+					j:Notify("Select a config first")
+					return
+				end
+				K(N)
+			end
+			if not j._vaultCfgHook then
+				j._vaultCfgHook = true
+				local N
+				E.InputBegan:Connect(function(O)
+					local P = O.UserInputType
+					if P == Enum.UserInputType.Touch or P == Enum.UserInputType.MouseButton1 then
+						N = O.Position
 					end
-					local R
-					for S, T in Q:GetDescendants() do
-						if T:IsA("TextLabel") then
-							local U = T.Text
-							if U == "Load" or U == "Save" or U == "Create" or U == "Delete" or U == "Export" or U == "Import" then
-								R = U
+				end)
+				E.InputEnded:Connect(function(O)
+					local P = O.UserInputType
+					if P ~= Enum.UserInputType.Touch and P ~= Enum.UserInputType.MouseButton1 then
+						return
+					end
+					if not N or (O.Position - N).Magnitude > 18 then
+						return
+					end
+					local Q = Vector2.new(O.Position.X, O.Position.Y)
+					local R = D:GetGuiInset()
+					local S = I(Q) or I(Q - R) or I(Q + R)
+					if S then
+						S()
+					end
+				end)
+			end
+			local function N(O, P)
+				if not O or G[O] then
+					return
+				end
+				G[O] = P
+			end
+			local function O()
+				local P = game:GetService("CoreGui")
+				local Q = UDim2.new(1, 0, 0, 36)
+				local function R(S)
+					if S:IsA("TextButton") and S.Text ~= "" then
+						return S.Text
+					end
+					local T
+					for U, V in S:GetDescendants() do
+						if V:IsA("TextLabel") then
+							local W = V.Text
+							if W == "Load" or W == "Save" or W == "Create" or W == "Delete" or W == "Export" or W == "Import" then
+								T = W
 							end
 						end
 					end
-					return R
+					return T
 				end
-				for Q, R in N:GetDescendants() do
-					if R:IsA("TextLabel") and R.Text:sub(1, 7) == "Configs" then
-						local S = R:FindFirstAncestorWhichIsA("TextButton")
-						local T = S and S.Parent
-						local U = T and T:FindFirstChildWhichIsA("ScrollingFrame")
-						if U and not U:GetAttribute("vaultCfgWatch") then
-							U:SetAttribute("vaultCfgWatch", true)
-							local function V(W)
-								if not W:IsA("TextButton") then
+				for S, T in P:GetDescendants() do
+					if T:IsA("TextLabel") and T.Text:sub(1, 7) == "Configs" then
+						local U = T:FindFirstAncestorWhichIsA("TextButton")
+						local V = U and U.Parent
+						local W = V and V:FindFirstChildWhichIsA("ScrollingFrame")
+						if W and not W:GetAttribute("vaultCfgWatch") then
+							W:SetAttribute("vaultCfgWatch", true)
+							local function X(Y)
+								if not Y:IsA("TextButton") then
 									return
 								end
-								L(W, function()
-									D = W.Name
+								N(Y, function()
+									F = Y.Name
 								end)
 							end
-							for W, X in U:GetChildren() do
-								V(X)
+							for Y, Z in W:GetChildren() do
+								X(Z)
 							end
-							U.ChildAdded:Connect(V)
+							W.ChildAdded:Connect(X)
 						end
 					end
 				end
-				for Q, R in N:GetDescendants() do
-					if R:IsA("TextLabel") and R.Text == "Load" then
-						local S = R:FindFirstAncestorWhichIsA("TextButton")
-						local T = S and S.Parent
-						if T and T:IsA("GuiObject") then
-							local U = T:FindFirstChildOfClass("UIListLayout")
-							if U then
-								U.FillDirection = Enum.FillDirection.Vertical
-								U.HorizontalAlignment = Enum.HorizontalAlignment.Center
-								U.Padding = UDim.new(0, 4)
+				for S, T in P:GetDescendants() do
+					if T:IsA("TextLabel") and T.Text == "Load" then
+						local U = T:FindFirstAncestorWhichIsA("TextButton")
+						local V = U and U.Parent
+						if V and V:IsA("GuiObject") then
+							local W = V:FindFirstChildOfClass("UIListLayout")
+							if W then
+								W.FillDirection = Enum.FillDirection.Vertical
+								W.HorizontalAlignment = Enum.HorizontalAlignment.Center
+								W.Padding = UDim.new(0, 4)
 							end
-							T.AutomaticSize = Enum.AutomaticSize.Y
-							T.Size = UDim2.new(1, 0, 0, 0)
-							if not T:GetAttribute("vaultSizePin") then
-								T:SetAttribute("vaultSizePin", true)
-								T:GetPropertyChangedSignal("Size"):Connect(function()
-									if T.Parent and T.Size ~= UDim2.new(1, 0, 0, 0) then
-										T.Size = UDim2.new(1, 0, 0, 0)
+							V.AutomaticSize = Enum.AutomaticSize.Y
+							V.Size = UDim2.new(1, 0, 0, 0)
+							if not V:GetAttribute("vaultSizePin") then
+								V:SetAttribute("vaultSizePin", true)
+								V:GetPropertyChangedSignal("Size"):Connect(function()
+									if V.Parent and V.Size ~= UDim2.new(1, 0, 0, 0) then
+										V.Size = UDim2.new(1, 0, 0, 0)
 									end
 								end)
-								T:GetPropertyChangedSignal("AutomaticSize"):Connect(function()
-									if T.Parent and T.AutomaticSize ~= Enum.AutomaticSize.Y then
-										T.AutomaticSize = Enum.AutomaticSize.Y
+								V:GetPropertyChangedSignal("AutomaticSize"):Connect(function()
+									if V.Parent and V.AutomaticSize ~= Enum.AutomaticSize.Y then
+										V.AutomaticSize = Enum.AutomaticSize.Y
 									end
 								end)
 							end
-							local V
-							for W, X in T:GetChildren() do
-								if X:IsA("GuiButton") then
-									X.Size = O
-									if P(X) == "Save" then
-										V = X
+							local X
+							for Y, Z in V:GetChildren() do
+								if Z:IsA("GuiButton") then
+									Z.Size = Q
+									if R(Z) == "Save" then
+										X = Z
 									end
-									if not X:GetAttribute("vaultPinned") then
-										X:SetAttribute("vaultPinned", true)
-										X:GetPropertyChangedSignal("Size"):Connect(function()
-											if X.Parent and X.Size ~= O then
-												X.Size = O
+									if not Z:GetAttribute("vaultPinned") then
+										Z:SetAttribute("vaultPinned", true)
+										Z:GetPropertyChangedSignal("Size"):Connect(function()
+											if Z.Parent and Z.Size ~= Q then
+												Z.Size = Q
 											end
 										end)
 									end
 								end
 							end
-							L(S, K)
-							if V and S and not S:GetAttribute("vaultLoadGuard") then
-								S:SetAttribute("vaultLoadGuard", true)
-								S.InputBegan:Connect(function(W)
-									local X = W.UserInputType
-									if X ~= Enum.UserInputType.Touch and X ~= Enum.UserInputType.MouseButton1 then
+							N(U, M)
+							if X and U and not U:GetAttribute("vaultLoadGuard") then
+								U:SetAttribute("vaultLoadGuard", true)
+								U.InputBegan:Connect(function(Y)
+									local Z = Y.UserInputType
+									if Z ~= Enum.UserInputType.Touch and Z ~= Enum.UserInputType.MouseButton1 then
 										return
 									end
-									V.Active = false
+									X.Active = false
 									task.delay(0.4, function()
-										if V.Parent then
-											V.Active = true
+										if X.Parent then
+											X.Active = true
 										end
 									end)
 								end)
 							end
-							if not T:GetAttribute("vaultShare") then
-								T:SetAttribute("vaultShare", true)
-								o = Instance.new("TextBox")
-								o.Name = "VaultConfigCode"
-								o.Size = UDim2.new(1, 0, 0, 72)
-								o.BackgroundColor3 = S.BackgroundColor3
-								o.TextColor3 = Color3.new(1, 1, 1)
-								o.PlaceholderText = "Paste config code"
-								o.PlaceholderColor3 = Color3.fromRGB(180, 180, 180)
-								o.Text = ""
-								o.ClearTextOnFocus = false
-								o.TextWrapped = true
-								o.MultiLine = true
-								o.TextXAlignment = Enum.TextXAlignment.Left
-								o.TextYAlignment = Enum.TextYAlignment.Top
-								o.Font = Enum.Font.Gotham
-								o.TextSize = 12
-								o.Parent = T
-								local W = Instance.new("UICorner")
-								W.CornerRadius = UDim.new(0, 6)
-								W.Parent = o
-								local X = Instance.new("UIPadding")
-								X.PaddingTop = UDim.new(0, 6)
-								X.PaddingLeft = UDim.new(0, 8)
-								X.PaddingRight = UDim.new(0, 8)
-								X.Parent = o
-								local function Y(Z, _)
-									local aa = Instance.new("TextButton")
-									aa.Name = Z
-									aa.Size = O
-									aa.BackgroundColor3 = S.BackgroundColor3
-									aa.Text = Z
-									aa.TextColor3 = Color3.new(1, 1, 1)
-									aa.Font = Enum.Font.GothamBold
-									aa.TextSize = 14
-									aa.AutoButtonColor = true
-									aa.Parent = T
-									local ab = Instance.new("UICorner")
-									ab.CornerRadius = UDim.new(0, 6)
-									ab.Parent = aa
-									aa.Activated:Connect(_)
-									L(aa, _)
-									return aa
+							if not V:GetAttribute("vaultShare") then
+								V:SetAttribute("vaultShare", true)
+								q = Instance.new("TextBox")
+								q.Name = "VaultConfigCode"
+								q.Size = UDim2.new(1, 0, 0, 72)
+								q.BackgroundColor3 = U.BackgroundColor3
+								q.TextColor3 = Color3.new(1, 1, 1)
+								q.PlaceholderText = "Paste config code"
+								q.PlaceholderColor3 = Color3.fromRGB(180, 180, 180)
+								q.Text = ""
+								q.ClearTextOnFocus = false
+								q.TextWrapped = true
+								q.MultiLine = true
+								q.TextXAlignment = Enum.TextXAlignment.Left
+								q.TextYAlignment = Enum.TextYAlignment.Top
+								q.Font = Enum.Font.Gotham
+								q.TextSize = 12
+								q.Parent = V
+								local Y = Instance.new("UICorner")
+								Y.CornerRadius = UDim.new(0, 6)
+								Y.Parent = q
+								local Z = Instance.new("UIPadding")
+								Z.PaddingTop = UDim.new(0, 6)
+								Z.PaddingLeft = UDim.new(0, 8)
+								Z.PaddingRight = UDim.new(0, 8)
+								Z.Parent = q
+								local function _(aa, ab)
+									local ac = Instance.new("TextButton")
+									ac.Name = aa
+									ac.Size = Q
+									ac.BackgroundColor3 = U.BackgroundColor3
+									ac.Text = aa
+									ac.TextColor3 = Color3.new(1, 1, 1)
+									ac.Font = Enum.Font.GothamBold
+									ac.TextSize = 14
+									ac.AutoButtonColor = true
+									ac.Parent = V
+									local ad = Instance.new("UICorner")
+									ad.CornerRadius = UDim.new(0, 6)
+									ad.Parent = ac
+									ac.Activated:Connect(ab)
+									N(ac, ab)
+									return ac
 								end
-								Y("Export", y)
-								Y("Import", function()
-									z(o.Text)
+								_("Export", A)
+								_("Import", function()
+									B(q.Text)
 								end)
 							end
 						end
@@ -629,20 +683,20 @@ local function c(d)
 					end
 				end
 			end
-			task.defer(M)
-			task.delay(0.6, M)
-			task.delay(1.5, M)
+			task.defer(O)
+			task.delay(0.6, O)
+			task.delay(1.5, O)
 		end
-		i:ApplyToTab(k)
+		k:ApplyToTab(m)
 		if d.beforeLoad then
-			d.beforeLoad(f, m)
+			d.beforeLoad(f, o)
 		end
-		j:LoadAutoloadConfig()
+		l:LoadAutoloadConfig()
 		if d.afterLoad then
 			d.afterLoad(f)
 		end
-		if h.KeybindFrame and not d.hideKeybindList then
-			h.KeybindFrame.Visible = Toggles.ShowKeybindList == nil or Toggles.ShowKeybindList.Value ~= false
+		if j.KeybindFrame and not d.hideKeybindList then
+			j.KeybindFrame.Visible = g.ShowKeybindList == nil or g.ShowKeybindList.Value ~= false
 		end
 	end
 
@@ -658,34 +712,34 @@ end
 return {
 	create = c,
 }
-end function a.c()local aa=a.cache.c if not aa then aa={c=b()}a.cache.c=aa end return aa.c end end do local function aa()
+end function a.b()local aa=a.cache.b if not aa then aa={c=b()}a.cache.b=aa end return aa.c end end do local function aa()
 local ab = debug.profilebegin or function() end
-local b = debug.profileend or function() end
+local ac = debug.profileend or function() end
 
-local function c(d, e, f)
+local function ad(b, c, d)
 	return function(...)
-		ab(d)
-		if f == 2 then
-			local g, h = e(...)
-			b()
-			return g, h
+		ab(b)
+		if d == 2 then
+			local e, f = c(...)
+			ac()
+			return e, f
 		end
-		local g = e(...)
-		b()
-		return g
+		local e = c(...)
+		ac()
+		return e
 	end
 end
 
 return {
 	begin = ab,
-	stop = b,
-	wrap = c,
+	stop = ac,
+	wrap = ad,
 }
-end function a.d()local ab=a.cache.d if not ab then ab={c=aa()}a.cache.d=ab end return ab.c end end do local function aa()
+end function a.c()local ab=a.cache.c if not ab then ab={c=aa()}a.cache.c=ab end return ab.c end end do local function aa()
 local ab = workspace.Raycast
-local b = a.d()
+local ac = a.c()
 
-local c = {
+local ad = {
 	Vector3.new(1, 0, 0),
 	Vector3.new(-1, 0, 0),
 	Vector3.new(0, 0, 1),
@@ -693,7 +747,7 @@ local c = {
 	Vector3.new(0, 1, 0),
 	Vector3.new(0, -1, 0),
 }
-local d = {
+local b = {
 	Vector3.new(0.5, 0, 0),
 	Vector3.new(-0.5, 0, 0),
 	Vector3.new(0, 0, 0.5),
@@ -701,7 +755,11 @@ local d = {
 	Vector3.new(0, 0.5, 0),
 	Vector3.new(0, -0.5, 0),
 }
-local e = {
+local c = {
+	Vector3.new(0.5, 0, 0.5),
+	Vector3.new(0.5, 0, -0.5),
+	Vector3.new(-0.5, 0, 0.5),
+	Vector3.new(-0.5, 0, -0.5),
 	Vector3.new(0.5, 0.5, 0),
 	Vector3.new(0.5, -0.5, 0),
 	Vector3.new(-0.5, 0.5, 0),
@@ -712,429 +770,440 @@ local e = {
 	Vector3.new(0, -0.5, -0.5),
 }
 
-local function f(...)
-	local g = {}
-	for h = 1, select("#", ...) do
-		local i = select(h, ...)
-		for j = 1, #i do
-			g[#g + 1] = i[j]
+local function d(...)
+	local e = {}
+	for f = 1, select("#", ...) do
+		local g = select(f, ...)
+		for h = 1, #g do
+			e[#e + 1] = g[h]
 		end
 	end
-	return g
+	return e
 end
 
-local g = {
-	Low = c,
-	Medium = f(d, c),
-	High = f(d, e, c),
+local e = {
+	Low = ad,
+	Medium = d(b, ad),
+	High = d(b, c, ad),
 }
 
-local h = RaycastParams.new()
-h.FilterType = Enum.RaycastFilterType.Exclude
-h.IgnoreWater = true
+local f = RaycastParams.new()
+f.FilterType = Enum.RaycastFilterType.Exclude
+f.IgnoreWater = true
 
-local function i(j, k, l, m, n, o, p)
+local function g(h, i, j, k, l, m, n)
 	LPH_ATTRIBUTES(VM(NONE))
-	if typeof(j) ~= "Vector3" or typeof(k) ~= "Vector3" then
+	if typeof(h) ~= "Vector3" or typeof(i) ~= "Vector3" then
 		return nil
 	end
-	if n(j, k) then
-		return j
+	if l(h, i) then
+		return h
 	end
-	l = tonumber(l) or 0
-	if l <= 0 then
+	j = tonumber(j) or 0
+	if j <= 0 then
 		return nil
 	end
-	p = tonumber(p)
-	local q = g[m] or g.High
-	h.FilterDescendantsInstances = o or {}
-	for r = 1, #q do
-		local s = q[r] * l
-		if p and math.abs(s.Y) > p then
-			s = Vector3.new(s.X, math.sign(s.Y) * p, s.Z)
+	n = tonumber(n)
+	local o = e[k] or e.High
+	f.FilterDescendantsInstances = m or {}
+	for p = 1, #o do
+		local q = o[p] * j
+		if n and math.abs(q.Y) > n then
+			q = Vector3.new(q.X, math.sign(q.Y) * n, q.Z)
 		end
-		local t = j + s
-		if not ab(workspace, j, t - j, h) and n(t, k) then
-			return t
+		local r = h + q
+		if not ab(workspace, h, r - h, f) and l(r, i) then
+			return r
 		end
 	end
 	return nil
 end
 
 return {
-	solve = b.wrap("manip.solve", i, 1),
+	solve = ac.wrap("manip.solve", g, 1),
 }
-end function a.e()local ab=a.cache.e if not ab then ab={c=aa()}a.cache.e=ab end return ab.c end end do local function aa()
+end function a.d()local ab=a.cache.d if not ab then ab={c=aa()}a.cache.d=ab end return ab.c end end do local function aa()
 local ab = {}
 
-function ab.build(b)
-	local c = b.flags
-	local d = b.tv
-	local e = b.ov
-	local f = b.util
-	local g = b.Players
-	local h = b.RunService
-	local i = b.UserInputService
-	local j = b.LocalPlayer
-	local k = b.RS
-	local l = b.Library
-	local m = b.Tabs
-	local n = b.HttpService
-	local o = b.manipulation
-	local p = b.RecoilController
-	local q = b.AimController
-	local r = b.FiremodeController
-	local s = b.Trajectory
-	local t = b.InventoryController
-	local u = b.CameraShaker
-	local v = b.paidToggleKeys
-	local w = b.paidOptionKeys
-	local x = b.Client
-	local y = b.Tools
-	local z = b.WeaponControllers
-	local A = b.cloneOriginal
-local B
-local C = false
+function ab.build(ac)
+	local ad = ac.flags
+	local b = ac.tv
+	local c = ac.ov
+	local d = ac.util
+	local e = ac.Players
+	local f = ac.RunService
+	local g = ac.UserInputService
+	local h = ac.LocalPlayer
+	local i = ac.RS
+	local j = ac.Library
+	local k = ac.Tabs
+	local l = ac.HttpService
+	local m = ac.manipulation
+	local n = ac.RecoilController
+	local o = ac.AimController
+	local p = ac.FiremodeController
+	local q = ac.Trajectory
+	local r = ac.InventoryController
+	local s = ac.CameraShaker
+	local t = ac.Client
+	local u = ac.Tools
+	local v = ac.WeaponControllers
+	local w = ac.cloneOriginal
+	local x = ac.hook
+local y
+local z = false
+local function A(B)
+	LPH_ATTRIBUTES(VM(NONE))
+	return type(B) == "table" and B.ExplosionSettings ~= nil
+end
+local function B(C, D)
+	LPH_ATTRIBUTES(VM(NONE))
+	return type(C) == "table" and (C.AmmoTypeName == "Rocket" or A(D))
+end
+local function C(D, E, F, G)
+	LPH_ATTRIBUTES(VM(NONE))
+	if not (ad.rpgprediction and E and F and G) then
+		return E.Position
+	end
+	local H = E.AssemblyLinearVelocity or Vector3.zero
+	local I = G.MuzzleVelocity or F.MuzzleVelocity or 0
+	if I <= 0 then
+		return E.Position
+	end
+
+	local J = workspace.Gravity
+	local K = E.Position
+	local L = (K - D).Magnitude / I
+	for M = 1, 3 do
+		K = E.Position + H * L
+		local N = (K - D).Magnitude
+		L = N / I
+	end
+
+	local M = math.clamp(c("rpgpredictionstrength", 1), 0, 2)
+	return K + Vector3.new(0, J * L * L * 0.5 * M, 0)
+end
+
 local function D(E)
 	LPH_ATTRIBUTES(VM(NONE))
-	return type(E) == "table" and E.ExplosionSettings ~= nil
-end
-local function E(F, G)
-	LPH_ATTRIBUTES(VM(NONE))
-	return type(F) == "table" and (F.AmmoTypeName == "Rocket" or D(G))
-end
-local function F(G, H, I, J)
-	LPH_ATTRIBUTES(VM(NONE))
-	if not (c.rpgprediction and H and I and J) then
-		return H.Position
-	end
-	local K = H.AssemblyLinearVelocity or Vector3.zero
-	local L = J.MuzzleVelocity or I.MuzzleVelocity or 0
-	if L <= 0 then
-		return H.Position
-	end
-
-	local M = workspace.Gravity
-	local N = H.Position
-	local O = (N - G).Magnitude / L
-	for P = 1, 3 do
-		N = H.Position + K * O
-		local Q = (N - G).Magnitude
-		O = Q / L
-	end
-
-	local P = math.clamp(e("rpgpredictionstrength", 1), 0, 2)
-	return N + Vector3.new(0, M * O * O * 0.5 * P, 0)
-end
-
-local function G(H)
-	LPH_ATTRIBUTES(VM(NONE))
-	if not H then
+	if not E then
 		return false
 	end
-	local I = H:FindFirstChild("CharacterValues")
-	local J = I and I:FindFirstChild("Unconscious")
-	return J ~= nil and J.Value == true
+	local F = E:FindFirstChild("CharacterValues")
+	local G = F and F:FindFirstChild("Unconscious")
+	return G ~= nil and G.Value == true
 end
 
+local E = 0
+
+local function F(G)
+	LPH_ATTRIBUTES(VM(NONE))
+	if not G or not G.Parent then
+		return false
+	end
+	local H = G.Parent:FindFirstChildOfClass("Humanoid")
+	return H ~= nil and H.Health > 0
+end
+
+local G = nil
 local H = 0
+local I = RaycastParams.new()
+I.FilterType = Enum.RaycastFilterType.Exclude
+local J = {}
+local K = nil
+local L = 0
 
-local function I(J)
+local M = Instance.new("Camera").WorldToViewportPoint
+local N = g.GetMouseLocation
+local O = game.FindFirstChild
+local P = game.FindFirstChildOfClass
+local Q = game.IsDescendantOf
+
+local function R()
 	LPH_ATTRIBUTES(VM(NONE))
-	if not J or not J.Parent then
-		return false
+	local S = os.clock()
+	if S - H < 0.05 then
+		return G
 	end
-	local K = J.Parent:FindFirstChildOfClass("Humanoid")
-	return K ~= nil and K.Health > 0
-end
+	H = S
 
-local J = nil
-local K = 0
-local L = RaycastParams.new()
-L.FilterType = Enum.RaycastFilterType.Exclude
-local M = {}
-local N = nil
-local O = 0
-
-local function P()
-	LPH_ATTRIBUTES(VM(NONE))
-	local Q = os.clock()
-	if Q - K < 0.05 then
-		return J
-	end
-	K = Q
-
-	local R = workspace.CurrentCamera
-	if not R then
-		J = nil
+	local T = workspace.CurrentCamera
+	if not T then
+		G = nil
 		return nil
 	end
 
-	local S = j
-	local T = S.Character
-	local U = S.Team
-	local V = R.CFrame.Position
-	local W = i:GetMouseLocation()
-	local X, Y
-	local Z = c.silenttarget
-	local _ = c.silentteamcheck
-	local ac = c.silentdistancecheck
-	local ad = c.silentmaxdistance
-	local ae = c.fovenabled
-	local af = c.fovsize
-	local ag = c.silentvisiblecheck
+	local U = h
+	local V = U.Character
+	local W = U.Team
+	local X = T.CFrame.Position
+	local Y = N(g)
+	local Z, _ = Y.X, Y.Y
+	local ae = ad.silenttarget
+	local af = ad.silentteamcheck and W
+	local ag = ad.silentdistancecheck and ad.silentmaxdistance
+	local ah = ag and ag * ag
+	
+	local ai = ad.fovenabled and ad.fovsize * ad.fovsize
+	local aj = ad.silentvisiblecheck
+	local ak, al = nil, ai or math.huge
 
-	table.clear(M)
-	if T then
-		M[1] = T
-	end
-	local ah = workspace:FindFirstChild("Ignore")
-	if ah then
-		M[#M + 1] = ah
-	end
-	if ag then
-		L.FilterDescendantsInstances = M
+	if aj then
+		table.clear(J)
+		if V then
+			J[1] = V
+		end
+		local am = O(workspace, "Ignore")
+		if am then
+			J[#J + 1] = am
+		end
+		I.FilterDescendantsInstances = J
 	end
 
-	for ai, aj in g:GetPlayers() do
-		local ak = aj.Character
-		if aj ~= S and ak and not G(ak) then
-			if not (_ and U and aj.Team == U) then
-				local al = ak:FindFirstChild(Z)
-				local am = ak:FindFirstChildOfClass("Humanoid")
-				if al and am and am.Health > 0 then
-					local an = al.Position
-					local ao = (an - V).Magnitude
-					if (not ac) or ao <= ad then
-						local ap, aq = R:WorldToViewportPoint(an)
-						if aq and ap.Z > 0 then
-							local ar = (Vector2.new(ap.X, ap.Y) - W).Magnitude
-							if ((not ae) or ar <= af) and (not Y or ar < Y) then
-								local as = true
-								if ag then
-									local at = workspace:Raycast(V, an - V, L)
-									if at and not at.Instance:IsDescendantOf(ak) then
-										as = false
-									end
-								end
-								if as then
-									X, Y = al, ar
-								end
-							end
-						end
-					end
-				end
+	for am, an in e:GetPlayers() do
+		local ao = an.Character
+		if an == U or not ao or (af and an.Team == W) then
+			continue
+		end
+		local ap = O(ao, ae)
+		if not ap then
+			continue
+		end
+		local aq = ap.Position
+		local ar = aq - X
+		if ah and ar:Dot(ar) > ah then
+			continue
+		end
+		local as, at = M(T, aq)
+		if not at then
+			continue
+		end
+		local au, av = as.X - Z, as.Y - _
+		local aw = au * au + av * av
+		if aw >= al then
+			continue
+		end
+		
+		local ax = P(ao, "Humanoid")
+		if not ax or ax.Health <= 0 or D(ao) then
+			continue
+		end
+		if aj then
+			local ay = workspace:Raycast(X, ar, I)
+			if ay and not Q(ay.Instance, ao) then
+				continue
 			end
 		end
+		ak, al = ap, aw
 	end
-	J = X
-	return X
+	G = ak
+	return ak
 end
 
-f.getTarget = function()
+d.getTarget = function()
 	LPH_ATTRIBUTES(VM(NONE))
-	if I(J) then
-		return J
+	if F(G) then
+		return G
 	end
-	K = 0
-	return P()
-end
-
-local function ac()
-	LPH_ATTRIBUTES(VM(NONE))
-	local ad = os.clock()
-	if ad == O then
-		return N
-	end
-	O = ad
-	local ae = t.getEquipped()
-	if typeof(ae) == "Instance" and ae:IsA("Tool") and ae:GetAttribute("ToolType") == "Weapon" then
-		N = ae
-		return ae
-	end
-	local af = j.Character
-	local ag = af and af:FindFirstChildOfClass("Tool")
-	if ag and ag:GetAttribute("ToolType") == "Weapon" then
-		N = ag
-		return ag
-	end
-	N = nil
-	return nil
-end
-
-f.getMuzzle = function()
-	LPH_ATTRIBUTES(VM(NONE))
-	local ad = ac()
-	if not ad then
-		return nil
-	end
-	local ae = j.Character
-	local af = ae and ae:FindFirstChild(ad.Name .. "Model")
-	local ag = (af and af:FindFirstChild("Handle")) or ad:FindFirstChild("Handle")
-	return ag and ag:FindFirstChild("Muzzle1")
-end
-
-local function ad()
-	LPH_ATTRIBUTES(VM(NONE))
-	if not (c.silentenabled or c.turretsilentenabled or c.aimbotenabled or c.snaplines) then
-		f.target = nil
-		return
-	end
-	f.target = P()
+	H = 0
+	return R()
 end
 
 local function ae()
 	LPH_ATTRIBUTES(VM(NONE))
-	if not c.aimbotenabled then
-		return
+	local af = os.clock()
+	if af == L then
+		return K
 	end
-	local af = false
-	if Options and Options.aimbotkey then
-		af = Options.aimbotkey:GetState()
+	L = af
+	local ag = r.getEquipped()
+	if typeof(ag) == "Instance" and ag:IsA("Tool") and ag:GetAttribute("ToolType") == "Weapon" then
+		K = ag
+		return ag
 	end
+	local ah = h.Character
+	local ai = ah and ah:FindFirstChildOfClass("Tool")
+	if ai and ai:GetAttribute("ToolType") == "Weapon" then
+		K = ai
+		return ai
+	end
+	K = nil
+	return nil
+end
+
+d.getMuzzle = function()
+	LPH_ATTRIBUTES(VM(NONE))
+	local af = ae()
 	if not af then
+		return nil
+	end
+	local ag = h.Character
+	local ah = ag and ag:FindFirstChild(af.Name .. "Model")
+	local ai = (ah and ah:FindFirstChild("Handle")) or af:FindFirstChild("Handle")
+	return ai and ai:FindFirstChild("Muzzle1")
+end
+
+local function af()
+	LPH_ATTRIBUTES(VM(NONE))
+	if not (ad.silentenabled or ad.turretsilentenabled or ad.aimbotenabled or ad.snaplines) then
+		d.target = nil
 		return
 	end
+	d.target = R()
+end
 
-	local ag = f.getTarget()
-	if not (ag and ag.Parent) then
+local function ag()
+	LPH_ATTRIBUTES(VM(NONE))
+	if not ad.aimbotenabled then
 		return
 	end
-
-	local ah = workspace.CurrentCamera
+	local ah = false
+	if Options and Options.aimbotkey then
+		ah = Options.aimbotkey:GetState()
+	end
 	if not ah then
 		return
 	end
 
-	local ai = ag.Position
-	local aj = math.max(1, e("aimbotsmoothness", 1))
+	local ai = d.getTarget()
+	if not (ai and ai.Parent) then
+		return
+	end
 
-	if e("aimbotmethod", "Camera") == "Mouse" and mousemoverel then
-		local ak, al = ah:WorldToViewportPoint(ai)
-		if al and ak.Z > 0 then
-			local am = i:GetMouseLocation()
-			local an = (ak.X - am.X) / aj
-			local ao = (ak.Y - am.Y) / aj
-			mousemoverel(an, ao)
+	local aj = workspace.CurrentCamera
+	if not aj then
+		return
+	end
+
+	local ak = ai.Position
+	local al = math.max(1, c("aimbotsmoothness", 1))
+
+	if c("aimbotmethod", "Camera") == "Mouse" and mousemoverel then
+		local am, an = aj:WorldToViewportPoint(ak)
+		if an and am.Z > 0 then
+			local ao = g:GetMouseLocation()
+			local ap = (am.X - ao.X) / al
+			local aq = (am.Y - ao.Y) / al
+			mousemoverel(ap, aq)
 		end
 	else
 
-		local ak = ah.CFrame
-		local al = CFrame.new(ak.Position, ai)
-		if aj == 1 then
-			ah.CFrame = al
+		local am = aj.CFrame
+		local an = CFrame.new(am.Position, ak)
+		if al == 1 then
+			aj.CFrame = an
 		else
-			ah.CFrame = ak:Lerp(al, 1 / aj)
+			aj.CFrame = am:Lerp(an, 1 / al)
 		end
 	end
 end
 
-local af = (function()
-local af = require(y.Weapon.Muzzle.Discharge)
-local ag = require(z.WeaponViewmodel)
-local ah = require(k.Shared.Ballistics.ProjectileCaster)
-local ai = require(k.Shared.WeaponConfigManager)
-local aj = require(x.Character.stance.MovementTuning)
-local ak = require(x.BodyReplication)
-local al = require(x.BodyReplication.BodyRotation)
-local am = require(k.Shared.Vehicle.TurretFireController)
-local an = require(x.Tools.Bandage)
-local ao
+local ah = (function()
+local ah = require(u.Weapon.Muzzle.Discharge)
+local ai = require(v.WeaponViewmodel)
+local aj = require(i.Shared.Ballistics.ProjectileCaster)
+local ak = require(i.Shared.WeaponConfigManager)
+local al = require(t.Character.stance.MovementTuning)
+local am = require(t.BodyReplication)
+local an = require(t.BodyReplication.BodyRotation)
+local ao = require(i.Shared.Vehicle.TurretFireController)
+local ap = require(t.Tools.Bandage)
+local aq
 pcall(function()
-	ao = require(j.PlayerScripts.BallisticsClient.FlybySuppression)
+	aq = require(h.PlayerScripts.BallisticsClient.FlybySuppression)
 end)
 
-local ap = debug.getupvalues
-local aq = debug.getconstants
-local ar = debug.getinfo
-local as = debug.getprotos or getprotos
+local ar = debug.getupvalues
+local as = debug.getconstants
+local at = debug.getinfo
+local au = debug.getprotos or getprotos
 
-local function at(Q)
-	return type(Q) == "function" and (not islclosure or islclosure(Q))
+local function av(aw)
+	return type(aw) == "function" and (not islclosure or islclosure(aw))
 end
 
-local function Q(R)
-	local S, T = pcall(ap, R)
-	return S and T or {}
+local function aw(ax)
+	local ay, S = pcall(ar, ax)
+	return ay and S or {}
 end
 
-local function R(S, T)
-	local U, V = pcall(aq, S)
-	if not U then
+local function ax(ay, S)
+	local T, U = pcall(as, ay)
+	if not T then
 		return false
 	end
-	for W, X in V do
-		if X == T then
+	for V, W in U do
+		if W == S then
 			return true
 		end
 	end
 	return false
 end
 
+local function ay(S, T)
+	for U, V in aw(S) do
+		if av(V) and T(V, U) then
+			return V, U
+		end
+	end
+end
+
 local function S(T, U)
-	for V, W in Q(T) do
-		if at(W) and U(W, V) then
+	if type(T) ~= "table" then
+		return nil
+	end
+	if U == nil then
+		return nil
+	end
+	for V, W in T do
+		if av(W) and U(W, V) then
 			return W, V
 		end
 	end
 end
 
-local function T(U, V)
-	if type(U) ~= "table" then
-		return nil
+local function T(U, V, W)
+	if type(U) == "table" and av(U[V]) then
+		return U[V], V
 	end
-	if V == nil then
-		return nil
-	end
-	for W, X in U do
-		if at(X) and V(X, W) then
-			return X, W
-		end
-	end
+	return S(U, W)
 end
 
-local function U(V, W, X)
-	if type(V) == "table" and at(V[W]) then
-		return V[W], W
-	end
-	return T(V, X)
-end
-
-local function V(W, X, Y, Z)
-	if not at(W) or Y < 0 then
+local function U(V, W, X, Y)
+	if not av(V) or X < 0 then
 		return nil
 	end
-	Z = Z or {}
-	if Z[W] then
+	Y = Y or {}
+	if Y[V] then
 		return nil
 	end
-	Z[W] = true
-	if X(W) then
-		return W
+	Y[V] = true
+	if W(V) then
+		return V
 	end
-	for _, au in Q(W) do
-		if at(au) then
-			local av = V(au, X, Y - 1, Z)
-			if av then
-				return av
+	for Z, _ in aw(V) do
+		if av(_) then
+			local az = U(_, W, X - 1, Y)
+			if az then
+				return az
 			end
-		elseif type(au) == "table" then
-			for av, aw in au do
-				if at(aw) then
-					local ax = V(aw, X, Y - 1, Z)
-					if ax then
-						return ax
+		elseif type(_) == "table" then
+			for az, aA in _ do
+				if av(aA) then
+					local aB = U(aA, W, X - 1, Y)
+					if aB then
+						return aB
 					end
 				end
 			end
 		end
 	end
-	if as then
-		local au, av = pcall(as, W)
-		if au then
-			for aw, ax in av do
-				if at(ax) then
-					local _ = V(ax, X, Y - 1, Z)
+	if au then
+		local az, aA = pcall(au, V)
+		if az then
+			for aB, Z in aA do
+				if av(Z) then
+					local _ = U(Z, W, X - 1, Y)
 					if _ then
 						return _
 					end
@@ -1145,15 +1214,15 @@ local function V(W, X, Y, Z)
 	return nil
 end
 
-local au = {}
+local az = {}
 
-local av = U(p, "recoilScale", function(av)
-	local aw = Q(av)
-	local ax, W, X = false, false, false
-	for Y, Z in aw do
+local aA = T(n, "recoilScale", function(aA)
+	local aB = aw(aA)
+	local V, W, X = false, false, false
+	for Y, Z in aB do
 		if type(Z) == "table" then
 			if type(Z.getAlpha) == "function" then
-				ax = true
+				V = true
 			end
 			if type(Z.getCharacterValues) == "function" then
 				W = true
@@ -1163,892 +1232,969 @@ local av = U(p, "recoilScale", function(av)
 			end
 		end
 	end
-	return ax and W and X
+	return V and W and X
 end)
-au.getRecoilMult = { func = av, upv = av and Q(av) or {} }
+az.getRecoilMult = { func = aA, upv = aA and aw(aA) or {} }
 
-local aw = U(af, "fire", function(aw)
-	return R(aw, "IsPreparation") and R(aw, "config")
+local aB = T(ah, "fire", function(aB)
+	return ax(aB, "IsPreparation") and ax(aB, "config")
 end)
-au.fire = { func = aw, upv = aw and Q(aw) or {} }
-au.spreadVector = {
-	func = aw and S(aw, function(ax)
-		local W = ar(ax)
+az.fire = { func = aB, upv = aB and aw(aB) or {} }
+az.spreadVector = {
+	func = aB and ay(aB, function(V)
+		local W = at(V)
 		return W.nups == 0 and W.numparams == 2
 	end),
 }
 
-local ax
-if ao and at(ao.new) then
-	for W, X in Q(ao.new) do
-		if type(X) == "table" and at(X.fire) then
-			ax = X.fire
+local V
+if aq and av(aq.new) then
+	for W, X in aw(aq.new) do
+		if type(X) == "table" and av(X.fire) then
+			V = X.fire
 			break
 		end
 	end
 end
-au.flybyFire = { func = ax }
+az.flybyFire = { func = V }
 
-local W = U(q, "flip", function(W)
-	return ar(W).numparams == 0 and ar(W).nups >= 1
+local W = T(o, "flip", function(W)
+	return at(W).numparams == 0 and at(W).nups >= 1
 end)
-local X = U(q, "canAim", function(X)
-	return R(X, "Stance") and R(X, "Walk")
+local X = T(o, "canAim", function(X)
+	return ax(X, "Stance") and ax(X, "Walk")
 end)
-au.aimtoggle = { func = W, upv = W and Q(W) or {} }
-au.isaimingavailable = { func = X, upv = X and Q(X) or {} }
-au.aimupdate = {
-	func = S(q.attach, function(Y)
-		local Z = Q(Y)
-		return typeof(Z[1]) == "Instance" and type(Z[2]) == "number" and type(Z[3]) == "number"
+az.aimtoggle = { func = W, upv = W and aw(W) or {} }
+az.isaimingavailable = { func = X, upv = X and aw(X) or {} }
+az.aimupdate = {
+	
+	func = ay(o.attach, function(Y)
+		local Z = at(Y)
+		return Z.numparams == 1 and ax(Y, "Prone") and ax(Y, "clamp")
 	end),
 }
-au.aimupdate.upv = au.aimupdate.func and Q(au.aimupdate.func) or {}
+az.aimupdate.upv = az.aimupdate.func and aw(az.aimupdate.func) or {}
 
-local Y = U(r, "pull", function(Y)
-	return R(Y, "isFiring") or ar(Y).numparams == 1
+local Y = T(p, "pull", function(Y)
+	return ax(Y, "isFiring") or at(Y).numparams == 1
 end)
 local Z
-if at(r.new) then
-	for _, ay in Q(r.new) do
-		if type(ay) == "table" and ay.Automatic then
-			Z = ay
+if av(p.new) then
+	for _, aC in aw(p.new) do
+		if type(aC) == "table" and aC.Automatic then
+			Z = aC
 			break
 		end
 	end
 end
-au.firemodestart = { func = Y, upv = Z }
+az.firemodestart = { func = Y, upv = Z }
 
-local ay
-if at(t.equip) then
-	ay = S(t.equip, function(_)
-		return R(_, "EquipTool")
+local aC
+if av(r.equip) then
+	aC = ay(r.equip, function(_)
+		return ax(_, "EquipTool")
 	end)
 end
-au.awaitLength = {
-	func = ay and S(ay, function(_)
-		return R(_, "Length") and R(_, "isConscious")
+az.awaitLength = {
+	func = aC and ay(aC, function(_)
+		return ax(_, "Length") and ax(_, "isConscious")
 	end),
 }
 
-au.movementupdate = {
-	func = U(aj, "apply", function(_)
-		return R(_, "inertialSpeed") and R(_, "sprintHeld")
+az.movementupdate = {
+	func = T(al, "apply", function(_)
+		return ax(_, "inertialSpeed") and ax(_, "sprintHeld")
 	end),
 }
 
-local _ = S(an.new, function(_)
-	return R(_, "HealLimb")
+local _ = ay(ap.new, function(_)
+	return ax(_, "HealLimb")
 end)
-au.healLimb = { func = _, upv = _ and Q(_) or {} }
+az.healLimb = { func = _, upv = _ and aw(_) or {} }
 
-au.muzzlesConfig = {
-	func = U(ai, "MuzzleConfigsOf", function(az)
-		return ar(az).numparams == 2
+az.muzzlesConfig = {
+	func = T(ak, "MuzzleConfigsOf", function(aD)
+		return at(aD).numparams == 2
 	end),
 }
 
-local az = S(ah.Fire, function(az)
-	return R(az, "Alive") and R(az, "OnFinish")
+local aD = ay(aj.Fire, function(aD)
+	return ax(aD, "Alive") and ax(aD, "OnFinish")
 end)
-au.onArcEnd = {
-	func = az and S(az, function(aA)
-		return R(aA, "Segments")
+az.onArcEnd = {
+	func = aD and ay(aD, function(aE)
+		return ax(aE, "Segments")
 	end),
 }
 
-local aA = S(am.Attach, function(aA)
-	return R(aA, "muzzleConfig") and R(aA, "WorldCFrame")
+local aE = ay(ao.Attach, function(aE)
+	return ax(aE, "muzzleConfig") and ax(aE, "WorldCFrame")
 end)
-au.fireOnce = { func = aA, upv = aA and Q(aA) or {} }
+az.fireOnce = { func = aE, upv = aE and aw(aE) or {} }
 
-au.sendOwnInfo = {
-	func = S(ak.flushNow, function(aB)
-		return R(aB, "NewCameraAngle")
+az.sendOwnInfo = {
+	func = ay(am.flushNow, function(aF)
+		return ax(aF, "NewCameraAngle")
 	end),
 }
 
-au.bodyRotationUpdate = {
-	func = U(al, "UpdateCharacter", function(aB)
-		return R(aB, "HumanoidRootPart") and R(aB, "LastUpdate")
+az.bodyRotationUpdate = {
+	func = T(an, "UpdateCharacter", function(aF)
+		return ax(aF, "HumanoidRootPart") and ax(aF, "LastUpdate")
 	end),
 }
-au.bodyWallPush = {
-	func = au.bodyRotationUpdate.func and S(au.bodyRotationUpdate.func, function(aB)
-		return ar(aB).numparams >= 4
+az.bodyWallPush = {
+	func = az.bodyRotationUpdate.func and ay(az.bodyRotationUpdate.func, function(aF)
+		return at(aF).numparams >= 4
 	end),
 }
 
-au.viewmodelWallPush = {
-	func = V(ag.attach, function(aB)
-		return R(aB, "viewmodelAttachment") and R(aB, "raise")
+az.viewmodelWallPush = {
+	func = U(ai.attach, function(aF)
+		return ax(aF, "viewmodelAttachment") and ax(aF, "raise")
 	end, 4),
 }
 
-local function aB(aC)
-	if not at(aC) then
+local function aF(aG)
+	if not av(aG) then
 		return false
 	end
-	local aD = ar(aC)
-	if not aD or (aD.numparams or 0) < 5 then
+	local aH = at(aG)
+	if not aH or (aH.numparams or 0) < 5 then
 		return false
 	end
-	if R(aC, "proj") and R(aC, "seed") and not R(aC, "GetServerTimeNow") then
+	if ax(aG, "proj") and ax(aG, "seed") and not ax(aG, "GetServerTimeNow") then
 		return false
 	end
-	local aE = 0
-	if R(aC, "GetServerTimeNow") then
-		aE += 1
+	local aI = 0
+	if ax(aG, "GetServerTimeNow") then
+		aI += 1
 	end
-	if R(aC, "encodeFire") then
-		aE += 1
+	if ax(aG, "encodeFire") then
+		aI += 1
 	end
-	if R(aC, "Direction") and R(aC, "Seed") then
-		aE += 1
+	if ax(aG, "Direction") and ax(aG, "Seed") then
+		aI += 1
 	end
-	if R(aC, "Unit") then
-		aE += 1
+	if ax(aG, "Unit") then
+		aI += 1
 	end
-	return aE >= 2
+	return aI >= 2
 end
 
-local function aC(aD)
-	if type(aD) ~= "table" then
+local function aG(aH)
+	if type(aH) ~= "table" then
 		return nil
 	end
-	if aB(aD.fireVolley) then
-		return aD.fireVolley
+	if aF(aH.fireVolley) then
+		return aH.fireVolley
 	end
-	local aE = aD.fire
-	if at(aE) then
-		local aF, aG = pcall(aq, aE)
-		if aF then
-			for aH, aI in aG do
-				if type(aI) == "string" then
-					local aJ = aD[aI]
-					if at(aJ) and aJ ~= aE and aB(aJ) then
-						return aJ
+	local aI = aH.fire
+	if av(aI) then
+		local aJ, aK = pcall(as, aI)
+		if aJ then
+			for aL, aM in aK do
+				if type(aM) == "string" then
+					local aN = aH[aM]
+					if av(aN) and aN ~= aI and aF(aN) then
+						return aN
 					end
 				end
 			end
 		end
-		for aH, aI in Q(aE) do
-			if aB(aI) then
-				return aI
+		for aL, aM in aw(aI) do
+			if aF(aM) then
+				return aM
 			end
 		end
 	end
-	for aF, aG in aD do
-		if aF ~= "fire" and aB(aG) then
-			return aG
+	for aJ, aK in aH do
+		if aJ ~= "fire" and aF(aK) then
+			return aK
 		end
 	end
 	return nil
 end
 
-local aD
-for aE, aF in au.fire.upv do
-	if aC(aF) then
-		aD = aF
+local aH
+for aI, aJ in az.fire.upv do
+	if aG(aJ) then
+		aH = aJ
 		break
 	end
 end
-if not aD then
+if not aH then
 	pcall(function()
-		local aE = j:FindFirstChild("PlayerScripts")
-		local aF = aE and aE:FindFirstChild("BallisticsClient")
-		local aG = aF and aF:FindFirstChild("ClientFire")
-		if aG then
-			aD = require(aG)
+		local aI = h:FindFirstChild("PlayerScripts")
+		local aJ = aI and aI:FindFirstChild("BallisticsClient")
+		local aK = aJ and aJ:FindFirstChild("ClientFire")
+		if aK then
+			aH = require(aK)
 		end
 	end)
 end
-au.volleyFrom = aC
-au.fireVolleyFn = aC(aD)
+az.volleyFrom = aG
+az.fireVolleyFn = aG(aH)
 
-return au
+return az
 end)()
 
-local function ag(ah, ai, aj, ak)
-	local al = ah.Transparency
-	local am = 1 - al
-	local an = aj / ak
-	local ao = am / an
+local function ai(aj, ak, al, am)
+	local an = aj.Transparency
+	local ao = 1 - an
+	local ap = al / am
+	local aq = ao / ap
 
-	task.wait(ai - aj)
-	for ap = 1, an do
-		task.wait(ak)
-		ah.Transparency += ao
+	task.wait(ak - al)
+	for ar = 1, ap do
+		task.wait(am)
+		aj.Transparency += aq
 	end
-	ah.Transparency = 1
-	ah:Destroy()
+	aj.Transparency = 1
+	aj:Destroy()
 end
 
-local function ah(ai, aj, ak, al, am)
-	local an = (aj - ai).Magnitude
-	if an <= 0.001 then
+local function aj(ak, al, am, an, ao)
+	local ap = (al - ak).Magnitude
+	if ap <= 0.001 then
 		return
 	end
-	local ao = (ai + aj) / 2
+	local aq = (ak + al) / 2
 
-	local ap = e("localtracersmaterial", "Plastic")
-	if al then
-		ap = e("teamtracersmaterial", "Plastic")
-	elseif am then
-		ap = e("enemytracersmaterial", "Plastic")
+	local ar = c("localtracersmaterial", "Plastic")
+	if an then
+		ar = c("teamtracersmaterial", "Plastic")
+	elseif ao then
+		ar = c("enemytracersmaterial", "Plastic")
 	end
 
-	local aq = e("localtracerscolor", Color3.fromRGB(59, 255, 50))
-	if al then
-		aq = e("teamtracerscolor", Color3.fromRGB(59, 144, 204))
-	elseif am then
-		aq = e("enemytracerscolor", Color3.fromRGB(255, 60, 60))
+	local as = c("localtracerscolor", Color3.fromRGB(59, 255, 50))
+	if an then
+		as = c("teamtracerscolor", Color3.fromRGB(59, 144, 204))
+	elseif ao then
+		as = c("enemytracerscolor", Color3.fromRGB(255, 60, 60))
 	end
 
-	local ar = e("localtracerstransparency", 0.5)
-	if al then
-		ar = e("teamtracerstransparency", 0.5)
-	elseif am then
-		ar = e("enemytracerstransparency", 0.5)
+	local at = c("localtracerstransparency", 0.5)
+	if an then
+		at = c("teamtracerstransparency", 0.5)
+	elseif ao then
+		at = c("enemytracerstransparency", 0.5)
 	end
 
-	local as = e("bullettracersize", 0.1)
+	local au = c("bullettracersize", 0.1)
 
-	local at = Instance.new("Part")
-	at.Name = "tracer"
-	at.Anchored = true
-	at.CanCollide = false
-	at.CanQuery = false
-	at.CanTouch = false
-	at.Material = Enum.Material[ap]
-	at.Color = aq
-	at.Size = Vector3.new(as, as, an)
-	at.CFrame = CFrame.new(ao, aj)
-	at.Parent = workspace:FindFirstChild("Ignore") or workspace
-	at.Transparency = ar
+	local av = Instance.new("Part")
+	av.Name = "tracer"
+	av.Anchored = true
+	av.CanCollide = false
+	av.CanQuery = false
+	av.CanTouch = false
+	av.Material = Enum.Material[ar]
+	av.Color = as
+	av.Size = Vector3.new(au, au, ap)
+	av.CFrame = CFrame.new(aq, al)
+	av.Parent = workspace:FindFirstChild("Ignore") or workspace
+	av.Transparency = at
 
-	task.spawn(ag, at, 3, 1, 0.05)
+	task.spawn(ai, av, 3, 1, 0.05)
 
-	return at
+	return av
 end
 
-local ai = setmetatable({}, { __mode = "k" })
-local aj = { origin = nil, at = 0 }
-local ak
-local al
+local ak = setmetatable({}, { __mode = "k" })
+local al = { origin = nil, at = 0 }
 local am
+local an
+local ao
+local ap
 
-local function an(ao, ap)
-	if ap and ao and (ap - ao).Magnitude > 0.05 then
-		aj.origin = ap
-		aj.at = os.clock()
+local function aq(ar, as)
+	if as and ar and (as - ar).Magnitude > 0.05 then
+		al.origin = as
+		al.at = os.clock()
 	end
 end
-if af.onArcEnd.func then
-	local ao = A(af.onArcEnd.func)
-	af.onArcEnd.func = hookfunction(af.onArcEnd.func, function(...)
+if ah.onArcEnd.func then
+	local ar
+	ar = x(ah.onArcEnd.func, function(...)
 		LPH_ATTRIBUTES(VM(NONE))
-		local ap = { ... }
-		local aq = ap[1]
-		local ar = table.pack(ao(...))
-		if not aq or aq.Alive or ai[aq] then
-			return table.unpack(ar, 1, ar.n)
+		local as = { ... }
+		local at = as[1]
+		local au = table.pack(ar(...))
+		if not at or at.Alive or ak[at] then
+			return table.unpack(au, 1, au.n)
 		end
 
-		ai[aq] = true
-		local as = aq.Owner
-		local at = as == j
-		local au = as ~= nil and not at and as.Team ~= nil and as.Team == j.Team
-		local av = as ~= nil and not at and not au
-		local aw = d("tracersenabled", false)
+		ak[at] = true
+		local av = at.Owner
+		local aw = av == h
+		local ax = av ~= nil and not aw and av.Team ~= nil and av.Team == h.Team
+		local ay = av ~= nil and not aw and not ax
+		local az = b("tracersenabled", false)
 			and (
-				(at and d("localtracers", false))
-				or (av and d("enemytracers", false))
-				or (au and d("teamtracers", false))
+				(aw and b("localtracers", false))
+				or (ay and b("enemytracers", false))
+				or (ax and b("teamtracers", false))
 			)
-		if aw then
-			local ax = at and aj.origin and os.clock() - aj.at < 0.25 and aj.origin
-			local ay = aq.Segments or {}
-			for az, aA in ipairs(ay) do
-				if typeof(aA.From) == "Vector3" and typeof(aA.To) == "Vector3" then
-					local aB = aA.From
-					if az == 1 and ax and (aB - ax).Magnitude > 0.15 then
-						aB = ax
-					end
-					task.spawn(ah, aB, aA.To, at, au, av)
-				end
-			end
-		end
-		return table.unpack(ar, 1, ar.n)
-	end)
-end
-
-if af.flybyFire.func then
-	local ao = A(af.flybyFire.func)
-	hookfunction(af.flybyFire.func, function(...)
-		LPH_ATTRIBUTES(VM(NONE))
-		if c.antisuppression then
-			return
-		end
-		return ao(...)
-	end)
-end
-
-local ao = u.Shake
-local ap = A(ao)
-u.Shake = function(...)
-	LPH_ATTRIBUTES(VM(NONE))
-	if c.antisuppression then
-		return
-	end
-	return ap(...)
-end
-
-if af.spreadVector.func then
-	hookfunction(af.spreadVector.func, function(aq, ar)
-		LPH_ATTRIBUTES(VM(NONE))
-		local as = e("spreadmult", 0)
-		if as == 0 then return aq.Unit end
-		local at = math.atan((ar or 1) / 3570) * as
-		local au = Vector3.new(math.random() * 2 - 1, math.random() * 2 - 1, math.random() * 2 - 1)
-		return (aq.Unit + au * at).Unit
-	end)
-end
-
-local function aq()
-	LPH_ATTRIBUTES(VM(NONE))
-	local ar, as, at = unpack(af.getRecoilMult.upv)
-	local au = as:getCharacterValues()
-	if au then
-		au = au:FindFirstChild("Stance")
-	end
-	return (ar[au and au.Value or "Walk"] or 1) * (1 - (at.getAlpha() or 0) * 0.25) * e("recoilmult", 0)
-end
-
-if af.getRecoilMult.func then
-	for ar, as in p do
-		if as == af.getRecoilMult.func then
-			p[ar] = aq
-			break
-		end
-	end
-	pcall(hookfunction, af.getRecoilMult.func, aq)
-end
-
-if af.sendOwnInfo.func then
-	local ar = A(af.sendOwnInfo.func)
-	hookfunction(af.sendOwnInfo.func, function(...)
-		LPH_ATTRIBUTES(VM(NONE))
-		if c.antiaimpitch then
-			local as = debug.getupvalue(ar, 1)
-			if as then
-				as.NewCameraAngle = math.rad(e("antiaimpitchangle", 90))
-			end
-		end
-		return ar(...)
-	end)
-end
-
-if af.bodyWallPush.func then
-	local ar = A(af.bodyWallPush.func)
-	hookfunction(af.bodyWallPush.func, function(as, ...)
-		LPH_ATTRIBUTES(VM(NONE))
-		if c.gunup and as and as.IsOwnCharacter then
-			as.WallPush = as.WallPush or { push = 0, raise = 0 }
-			as.WallPush.push = 0
-			as.WallPush.raise = math.rad(89)
-			return 0, math.rad(89)
-		end
-		return ar(as, ...)
-	end)
-end
-
-if af.viewmodelWallPush.func then
-	local ar = A(af.viewmodelWallPush.func)
-	hookfunction(af.viewmodelWallPush.func, function(...)
-		LPH_ATTRIBUTES(VM(NONE))
-		if c.gunup then
-			debug.setupvalue(ar, 2, 0)
-			debug.setupvalue(ar, 3, math.rad(89))
-			return
-		end
-		return ar(...)
-	end)
-end
-
-if af.bodyRotationUpdate.func then
-	local ar = A(af.bodyRotationUpdate.func)
-	hookfunction(af.bodyRotationUpdate.func, function(as, at)
-		LPH_ATTRIBUTES(VM(NONE))
-		if not c.antiaimpitch and not c.gunup then
-			return ar(as, at)
-		end
-		if as ~= j.Character or not at then
-			return ar(as, at)
-		end
-
-		if c.antiaimpitch then
-			local au = math.rad(e("antiaimpitchangle", 90))
-			at.NewCameraAngle = au
-			at.CurrentCameraAngle = au
-		end
-
-		local au = at.StanceValue
-		local av
-		if c.gunup and au then
-			av = au.Value
-			au.Value = "Walk"
-		end
-		local aw = table.pack(ar(as, at))
-		if av ~= nil and au.Parent then
-			au.Value = av
-		end
-		return table.unpack(aw, 1, aw.n)
-	end)
-end
-
-local function ar(as)
-	local at = {}
-	for au, av in as or {} do
-		local aw = typeof(av)
-		if aw == "RaycastParams" then
-			at.raycastParams = av
-		elseif aw == "function" then
-			at.spreadVector = av
-		elseif aw == "Instance" then
-			if av:IsA("Camera") then
-				at.camera = av
-			elseif av:IsA("Player") then
-				at.player = av
-			elseif av:IsA("ReplicatedStorage") then
-				at.replicatedStorage = av
-			end
-		elseif aw == "table" then
-			if type(av.IsPreparation) == "function" then
-				at.matchPhase = av
-			elseif type(av.getCharacter) == "function" then
-				at.wielder = av
-			elseif type(av.isShown) == "function" then
-				at.viewmodel = av
-			elseif type(av.zeroAngle) == "function" then
-				at.zeroController = av
-			elseif type(av.MuzzleFlash) == "function" then
-				at.weaponEffects = av
-			elseif type(av.Play) == "function" then
-				at.soundManager = av
-			elseif type(av.flushNow) == "function" then
-				at.bodyReplication = av
-			elseif af.volleyFrom(av) then
-				at.clientFire = av
-			end
-		end
-	end
-	return at
-end
-
-if af.fire.func then
-	local as = A(af.fire.func)
-	local at = ar(af.fire.upv)
-	local au = at.bodyReplication
-	if type(au) ~= "table" then
-		local av, aw = pcall(require, x.BodyReplication)
-		if av and type(aw) == "table" then
-			au = aw
-		end
-	end
-	hookfunction(af.fire.func, function(av, aw)
-		LPH_ATTRIBUTES(VM(NONE))
-		local ax = at.matchPhase
-		local ay = at.wielder
-		local az = at.camera
-		local aA = at.raycastParams
-		local aB = at.player
-		local aC = at.zeroController
-		local aD = at.spreadVector
-		local aE = at.soundManager
-		local aF = at.weaponEffects
-		local aG = at.clientFire
-		local aH = at.viewmodel
-		if not (ax and ay and az and aC and aD and aE and aF) then
-			return as(av, aw)
-		end
-		local aI = af.volleyFrom(aG) or af.fireVolleyFn
-
-		if ax.IsPreparation() then
-			return
-		end
-		local aJ = av.config
-		local Q = ay:getCharacter()
-		local R = Q and Q:FindFirstChild("Right Arm")
-		local S = (az.CFrame.Position - az.Focus.Position).Magnitude <= 0.75
-		local T = not aH or aH.isShown()
-		local U = (S and T and av.viewmodelAttachment) or av.attachment
-		local V = U.WorldPosition
-		local W = U.WorldCFrame.LookVector
-		if R and typeof(aA) == "RaycastParams" and typeof(aB) == "Instance" then
-			local X = (V - R.CFrame.Position).Magnitude
-			aA.FilterDescendantsInstances = { aB.Character, workspace.Ignore }
-			local Y = workspace:Raycast(V - W * X, W * X, aA)
-			if Y then
-				V = Y.Position - W * math.min(0.01, Y.Distance)
-			end
-		end
-
-		local X = aC.zeroAngle() or math.rad(aJ.DefaultAngle or 0)
-		local Y = (U.WorldCFrame * CFrame.Angles(X, 0, 0)).LookVector
-		local Z = aJ.BulletSettings[aw]
-		local _ = V
-		local aK = al
-		if not aK and c.silentenabled then
-			local aL = f.getTarget()
-			if aL then
-				aK = E(aJ, Z)
-						and F(V, aL, aJ, Z)
-					or aL.Position
-				if c.manipulation and ak then
-					local aM = {}
-					if aB and aB.Character then
-						aM[1] = aB.Character
-					end
-					local aN = workspace:FindFirstChild("Ignore")
-					if aN then
-						aM[#aM + 1] = aN
-					end
-					local aO = ak(V, aK, aL.Parent, Z and Z.Penetration, aM)
-					if aO then
-						V = aO
-					end
-				end
-			end
-		elseif am then
-			V = am
-		end
-		if aK then
-			local aL = aK - V
-			if aL.Magnitude > 0.001 then
-				Y = aL.Unit
-			end
-		end
-		an(_, V)
-
-		av.animator:play("GunShoot")
-		H = H + 1
-		local aL = Z.ShotAmount or 1
-		local aM = table.create(aL)
-		for aN = 1, aL do
-			aM[aN] = aD(Y, Z.Spread or 1)
-		end
-
-		local aN = av.tool.Sounds:FindFirstChild("Muzzle" .. av.index)
-		aN = aN and aN:FindFirstChild("Fire")
-		if aN then
-			aE.Play(aN, U.WorldPosition, aJ.SoundRange or 3000)
-		end
-		aF.MuzzleFlash(U, av.tool.Name)
-		C = D(Z)
-		if au and type(au.flushNow) == "function" then
-			au.flushNow()
-		end
-		if aI then
-			aI(av.tool, av.index, aw, V, aM)
-		end
-		C = false
-		if not av:isHandAction() then
-			aF.Casing(U, av.tool.Name)
-		end
-	end)
-end
-
-if af.fireOnce.func then
-	local as = A(af.fireOnce.func)
-	hookfunction(af.fireOnce.func, function()
-		LPH_ATTRIBUTES(VM(NONE))
-		local at, au, av, aw, ax, ay =
-			unpack(debug.getupvalues(as))
-		if not (at and at.muzzle and at.muzzle.Parent) then
-			return
-		end
-		local az = af.volleyFrom(ax) or af.fireVolleyFn
-
-		local aA = at.muzzleConfig
-		local aB = at.muzzle
-		local aC = aB.WorldCFrame
-		local aD = aC.Position
-		local aE = (aC * CFrame.Angles(math.rad(aA.DefaultAngle or 0), 0, 0)).LookVector
-		local aF = aA.BulletSettings and aA.BulletSettings[1] or {}
-		if c.turretsilentenabled then
-			local aG = f.getTarget()
-			if aG then
-				local aH = E(aA, aF)
-						and F(aD, aG, aA, aF)
-					or aG.Position
-				local aI = aH - aD
-				if aI.Magnitude > 0.001 then
-					aE = aI.Unit
-				end
-			end
-		end
-
-		local aG = aF.ShotAmount or 1
-		local aH = table.create(aG)
-		for aI = 1, aG do
-			aH[aI] = au(aE, aF.Spread or 1)
-		end
-		if at.loopSound then
-			av.Play(at.loopSound, aD, aA.SoundRange or 3000)
-			if at.burstTracker then
-				at.burstTracker.onShot(aD)
-			end
-		elseif at.fireSound then
-			av.Play(at.fireSound, aD, aA.SoundRange or 3000)
-		end
-		aw.MuzzleFlash(aB, at.weaponName)
-		aw.Casing(aB, at.weaponName)
-		C = D(aF)
 		if az then
-			az(at.weaponName, 1, 1, aD, aH)
+			local aA = aw and al.origin and os.clock() - al.at < 0.25 and al.origin
+			local aB = at.Segments or {}
+			for aC, aD in ipairs(aB) do
+				if typeof(aD.From) == "Vector3" and typeof(aD.To) == "Vector3" then
+					local aE = aD.From
+					if aC == 1 and aA and (aE - aA).Magnitude > 0.15 then
+						aE = aA
+					end
+					task.spawn(aj, aE, aD.To, aw, ax, ay)
+				end
+			end
 		end
-		C = false
-		ay.ApplyRecoil()
+		return table.unpack(au, 1, au.n)
 	end)
 end
-if af.aimtoggle.func then
-local as = A(af.aimtoggle.func)
-af.aimtoggle.func = hookfunction(af.aimtoggle.func, function(...)
-	LPH_ATTRIBUTES(VM(NONE))
-	local at = as
-	if not c.aimanywhere then
-		return at(...)
-	end
-	local au = debug.getupvalue(at, 1)
-	debug.setupvalue(at, 1, (au == 0) and 1 or 0)
-end)
+
+if ah.flybyFire.func then
+	local ar
+	ar = x(ah.flybyFire.func, function(...)
+		LPH_ATTRIBUTES(VM(NONE))
+		if ad.antisuppression then
+			return
+		end
+		return ar(...)
+	end)
 end
 
-if af.aimupdate.func then
-local as = A(af.aimupdate.func)
-af.aimupdate.func = hookfunction(af.aimupdate.func, function(at)
+local ar = s.Shake
+local as = w(ar)
+s.Shake = function(...)
 	LPH_ATTRIBUTES(VM(NONE))
-	local au = as
-	local av = c.instantads
-	local aw = c.aimanywhere
-	local ax = c.noadsslowdown
-	if not (av or aw or ax) then
-		return au(at)
-	end
-
-	local ay = debug.getupvalue(au, 3) == 1
-	if av then
-		debug.setupvalue(au, 2, ay and 1 or 0)
-	end
-
-	au(at)
-
-	if aw and ay then
-		debug.setupvalue(au, 3, 1)
-		if av then
-			debug.setupvalue(au, 2, 1)
-		end
-	end
-
-	if ax then
-		local az = debug.getupvalue(au, 1)
-		if typeof(az) == "Instance" then
-			az.Value = 1
-		end
-	end
-end)
-end
-
-if af.isaimingavailable.func then
-local as = A(af.isaimingavailable.func)
-af.isaimingavailable.func = hookfunction(af.isaimingavailable.func, function(...)
-	LPH_ATTRIBUTES(VM(NONE))
-	if c.aimanywhere then
-		return true
+	if ad.antisuppression then
+		return
 	end
 	return as(...)
+end
+
+
+if ah.getRecoilMult.func then
+	local at
+	at = x(ah.getRecoilMult.func, function(...)
+		LPH_ATTRIBUTES(VM(NONE))
+		return (at(...) or 1) * c("recoilmult", 0)
+	end)
+end
+
+
+
+
+
+
+local at = { dir = nil, untilT = 0, since = 0 }
+ac.lookHold = at
+local au = 2.5
+
+local function av(aw, ax)
+	LPH_ATTRIBUTES(VM(NONE))
+	local ay = os.clock()
+	local az = at.dir
+	
+	if not az or ay > at.untilT or az:Dot(aw) < 0.94 then
+		at.since = ay
+	end
+	at.dir = aw
+	at.untilT = math.max(at.untilT, ay + ax)
+end
+
+local function aw()
+	LPH_ATTRIBUTES(VM(NONE))
+	if at.dir and os.clock() <= at.untilT then
+		return at.dir
+	end
+	at.dir = nil
+	return nil
+end
+
+
+local function ax(ay, az)
+	LPH_ATTRIBUTES(VM(NONE))
+	local aA = ay.CFrame:VectorToObjectSpace(az)
+	return math.atan2(-aA.X, -aA.Z)
+end
+
+if ah.sendOwnInfo.func then
+	local ay
+	ay = x(ah.sendOwnInfo.func, function(...)
+		LPH_ATTRIBUTES(VM(NONE))
+		local az = debug.getupvalue(ay, 1)
+		if type(az) == "table" then
+			local aA = aw()
+			if aA then
+				az.NewCameraAngle = math.asin(math.clamp(aA.Y, -1, 1))
+				local aB = az.HumanoidRootPart
+				if aB and aB.Parent then
+					az.NewCameraYaw = math.clamp(ax(aB, aA), -au, au)
+				end
+			elseif ad.antiaimpitch then
+				az.NewCameraAngle = math.rad(c("antiaimpitchangle", 90))
+			end
+		end
+		return ay(...)
+	end)
+end
+
+if ah.bodyWallPush.func then
+	local ay
+	ay = x(ah.bodyWallPush.func, function(az, ...)
+		LPH_ATTRIBUTES(VM(NONE))
+		if ad.gunup and az and az.IsOwnCharacter then
+			az.WallPush = az.WallPush or { push = 0, raise = 0 }
+			az.WallPush.push = 0
+			az.WallPush.raise = math.rad(89)
+			return 0, math.rad(89)
+		end
+		return ay(az, ...)
+	end)
+end
+
+if ah.viewmodelWallPush.func then
+	local ay
+	ay = x(ah.viewmodelWallPush.func, function(...)
+		LPH_ATTRIBUTES(VM(NONE))
+		if ad.gunup then
+			debug.setupvalue(ay, 2, 0)
+			debug.setupvalue(ay, 3, math.rad(89))
+			return
+		end
+		return ay(...)
+	end)
+end
+
+if ah.bodyRotationUpdate.func then
+	local ay
+	ay = x(ah.bodyRotationUpdate.func, function(az, aA)
+		LPH_ATTRIBUTES(VM(NONE))
+		if not ad.antiaimpitch and not ad.gunup then
+			return ay(az, aA)
+		end
+		if az ~= h.Character or not aA then
+			return ay(az, aA)
+		end
+
+		if ad.antiaimpitch and not aw() then
+			local aB = math.rad(c("antiaimpitchangle", 90))
+			aA.NewCameraAngle = aB
+			aA.CurrentCameraAngle = aB
+		end
+
+		local aB = aA.StanceValue
+		local aC
+		if ad.gunup and aB then
+			aC = aB.Value
+			aB.Value = "Walk"
+		end
+		local aD = table.pack(ay(az, aA))
+		if aC ~= nil and aB.Parent then
+			aB.Value = aC
+		end
+		return table.unpack(aD, 1, aD.n)
+	end)
+end
+
+local function ay(az)
+	local aA = {}
+	for aB, aC in az or {} do
+		local aD = typeof(aC)
+		if aD == "RaycastParams" then
+			aA.raycastParams = aC
+		elseif aD == "function" then
+			aA.spreadVector = aC
+		elseif aD == "Instance" then
+			if aC:IsA("Camera") then
+				aA.camera = aC
+			elseif aC:IsA("Player") then
+				aA.player = aC
+			elseif aC:IsA("ReplicatedStorage") then
+				aA.replicatedStorage = aC
+			end
+		elseif aD == "table" then
+			if type(aC.IsPreparation) == "function" then
+				aA.matchPhase = aC
+			elseif type(aC.getCharacter) == "function" then
+				aA.wielder = aC
+			elseif type(aC.isShown) == "function" then
+				aA.viewmodel = aC
+			elseif type(aC.zeroAngle) == "function" then
+				aA.zeroController = aC
+			elseif type(aC.MuzzleFlash) == "function" then
+				aA.weaponEffects = aC
+			elseif type(aC.Play) == "function" then
+				aA.soundManager = aC
+			elseif type(aC.flushNow) == "function" then
+				aA.bodyReplication = aC
+			elseif ah.volleyFrom(aC) then
+				aA.clientFire = aC
+			end
+		end
+	end
+	return aA
+end
+
+local function az(aA)
+	for aB, aC in debug.getupvalues(aA) do
+		if type(aC) == "function" and islclosure(aC) then
+			local aD = debug.getinfo(aC)
+			if aD.nups == 0 and aD.numparams == 2 then
+				return aC
+			end
+		end
+	end
+end
+
+
+
+
+
+local function aA(aB)
+	local aC = 0
+	for aD, aE in aB:GetChildren() do
+		local aF = aE:IsA("BasePart") and O(aE, "Health")
+		if aF and aF:IsA("ValueBase") then
+			aC += aF.Value
+		end
+	end
+	return aC
+end
+
+local aB = { dir = nil, origin = nil }
+local aC = { n = 0 }
+ac.shotLog = aC
+
+local function aD(aE)
+	if not aE then
+		return
+	end
+	local aF
+	aF = x(aE, function(aG, aH)
+		LPH_ATTRIBUTES(VM(NONE))
+		local aI = aB.dir or aG
+		local aJ = c("spreadmult", 0)
+		if aJ <= 0 then
+			return aI.Unit
+		end
+		if aJ >= 1 then
+			return aF(aI, aH)
+		end
+		return aF(aI, (aH or 1) * aJ)
+	end)
+end
+aD(ah.spreadVector.func)
+
+local aE = {}
+local function aF()
+	LPH_ATTRIBUTES(VM(NONE))
+	table.clear(aE)
+	local aG = h.Character
+	if aG then
+		aE[1] = aG
+	end
+	local aH = workspace:FindFirstChild("Ignore")
+	if aH then
+		aE[#aE + 1] = aH
+	end
+	return aE
+end
+
+
+local function aG(aH, aI, aJ)
+	LPH_ATTRIBUTES(VM(NONE))
+	local aK = d.getTarget()
+	if not aK then
+		return nil
+	end
+	local aL = B(aI, aJ) and C(aH, aK, aI, aJ)
+		or aK.Position
+	local aM = aH
+	if ad.manipulation and am then
+		local aN = am(aH, aL, aK.Parent, ((aJ and aJ.Penetration) or 0) / 10, aF())
+		if aN then
+			aM = aN
+		end
+	end
+	return aL, aM
+end
+
+local function aH(aI, aJ, aK)
+	LPH_ATTRIBUTES(VM(NONE))
+	local aL = aI - aJ
+	aB.aim = aI
+	if aL.Magnitude > 0.001 then
+		aB.dir = aL.Unit
+		
+		av(aB.dir, 0.25)
+	end
+	if (aJ - aK).Magnitude > 0.05 then
+		aB.origin = aJ
+	end
+end
+
+if ah.fireVolleyFn then
+	local aI
+	aI = x(ah.fireVolleyFn, function(aJ, aK, aL, aM, aN, S)
+		LPH_ATTRIBUTES(VM(NONE))
+		local T = aB.origin
+		if T then
+			aq(aM, T)
+			aM = T
+		end
+		
+		
+		local U = ac.shiftTest
+		if U and aB.aim then
+			U.count = (U.count or 0) + 1
+			local V = (math.floor((U.count - 1) / U.per) % #U.seq) + 1
+			local W = U.seq[V]
+			local X = (aB.aim - aM).Unit
+			local Y = X:Cross(Vector3.yAxis)
+			Y = Y.Magnitude > 1e-3 and Y.Unit or Vector3.xAxis
+			local Z = Y * W.X + Vector3.yAxis * W.Y
+			T = aM + Z
+			aM = T
+			local _ = (aB.aim - aM).Unit
+			aN = table.clone(aN)
+			for aO = 1, #aN do
+				aN[aO] = _
+			end
+			av(_, 0.25)
+			U.last = W
+		end
+		
+		local aO = aC
+		
+		local V = aB.target
+		local W = {
+			t = os.clock(),
+			origin = aM,
+			redirected = aB.dir ~= nil,
+			shift = T and (T - aB.muzzle).Magnitude or 0,
+			test = ac.shiftTest and ac.shiftTest.last,
+			target = V and V.Parent and V.Parent.Name,
+			rage = an ~= nil,
+			dmg = 0,
+		}
+		aO[(aO.n % 40) + 1] = W
+		aO.n += 1
+		
+		local X = V and V.Parent
+		if X then
+			local Y = aA(X)
+			task.delay(0.6, function()
+				W.dmg = math.max(0, Y - aA(X))
+			end)
+		end
+		return aI(aJ, aK, aL, aM, aN, S)
+	end)
+end
+
+if ah.fire.func then
+	local aI = ay(ah.fire.upv)
+	local aJ = aI.viewmodel
+	local aK
+	aK = x(ah.fire.func, function(aL, aM)
+		LPH_ATTRIBUTES(VM(NONE))
+		local aN = aL and aL.config
+		local aO = aN and aN.BulletSettings and aN.BulletSettings[aM]
+		local S, T = an, ap
+		local U = workspace.CurrentCamera
+		local V = U and (U.CFrame.Position - U.Focus.Position).Magnitude <= 0.75
+		local W = aL and ((V and (not aJ or aJ.isShown()) and aL.viewmodelAttachment) or aL.attachment)
+		local X = W and W.WorldPosition
+		aB.target, aB.muzzle = ao, X
+		if X then
+			if not S and ad.silentenabled and aN then
+				S, T = aG(X, aN, aO)
+				aB.target = S and d.getTarget()
+			end
+			if S then
+				aH(S, T or X, X)
+			elseif (ad.antiaimpitch or ad.antiaimspin) and U then
+				av(U.CFrame.LookVector, 0.25)
+			end
+		end
+		E += 1
+		z = A(aO)
+		local Y, Z = pcall(aK, aL, aM)
+		aB.dir, aB.origin, aB.aim = nil, nil, nil
+		z = false
+		if not Y then
+			error(Z, 0)
+		end
+	end)
+end
+
+if ah.fireOnce.func then
+	aD(az(ah.fireOnce.func))
+	local aI
+	aI = x(ah.fireOnce.func, function(...)
+		LPH_ATTRIBUTES(VM(NONE))
+		local aJ = ad.turretsilentenabled and debug.getupvalue(aI, 1)
+		local aK = type(aJ) == "table" and aJ.muzzle
+		if aK and aK.Parent then
+			local aL = aJ.muzzleConfig
+			local aM = aL and aL.BulletSettings and aL.BulletSettings[1] or {}
+			local aN = aK.WorldCFrame.Position
+			local aO = d.getTarget()
+			if aO and aL then
+				local S = B(aL, aM) and C(aN, aO, aL, aM)
+					or aO.Position
+				aH(S, aN, aN)
+			end
+			z = A(aM)
+		end
+		local aL, aM = pcall(aI, ...)
+		aB.dir, aB.origin, aB.aim = nil, nil, nil
+		z = false
+		if not aL then
+			error(aM, 0)
+		end
+	end)
+end
+if ah.aimtoggle.func then
+local aI
+aI = x(ah.aimtoggle.func, function(...)
+	LPH_ATTRIBUTES(VM(NONE))
+	local aJ = aI
+	if not ad.aimanywhere then
+		return aJ(...)
+	end
+	local aK = debug.getupvalue(aJ, 1)
+	debug.setupvalue(aJ, 1, (aK == 0) and 1 or 0)
 end)
 end
 
-if af.firemodestart.func then
-local as = A(af.firemodestart.func)
-af.firemodestart.func = hookfunction(af.firemodestart.func, function(at)
+if ah.aimupdate.func then
+local aI
+aI = x(ah.aimupdate.func, function(aJ)
 	LPH_ATTRIBUTES(VM(NONE))
-	local au = af.firemodestart.upv
+	local aK = aI
+	local aL = ad.instantads
+	local aM = ad.aimanywhere
+	local aN = ad.noadsslowdown
+	if not (aL or aM or aN) then
+		return aK(aJ)
+	end
 
-	if not at.isFiring then
-		at.isFiring = true
-		local av = at:_current()
-		if av then
-			local aw = av.strategy
-			if c.forceauto then
-				local ax = au and au.Automatic
-				if ax and ax.strategy then
-					aw = ax.strategy
+	local aO = debug.getupvalue(aK, 3) == 1
+	if aL then
+		debug.setupvalue(aK, 2, aO and 1 or 0)
+	end
+
+	aK(aJ)
+
+	if aM and aO then
+		debug.setupvalue(aK, 3, 1)
+		if aL then
+			debug.setupvalue(aK, 2, 1)
+		end
+	end
+
+	if aN then
+		local S = debug.getupvalue(aK, 1)
+		if typeof(S) == "Instance" then
+			S.Value = 1
+		end
+	end
+end)
+end
+
+if ah.isaimingavailable.func then
+local aI
+aI = x(ah.isaimingavailable.func, function(...)
+	LPH_ATTRIBUTES(VM(NONE))
+	if ad.aimanywhere then
+		return true
+	end
+	return aI(...)
+end)
+end
+
+if ah.firemodestart.func then
+local aI
+aI = x(ah.firemodestart.func, function(aJ)
+	LPH_ATTRIBUTES(VM(NONE))
+	local aK = ah.firemodestart.upv
+
+	if not aJ.isFiring then
+		aJ.isFiring = true
+		local aL = aJ:_current()
+		if aL then
+			local aM = aL.strategy
+			if ad.forceauto then
+				local aN = aK and aK.Automatic
+				if aN and aN.strategy then
+					aM = aN.strategy
 				end
 			end
-			if aw then
-				task.spawn(aw.fire, at)
+			if aM then
+				task.spawn(aM.fire, aJ)
 			end
 		end
 	end
 end)
 end
 
-if af.awaitLength.func then
-	local as = A(af.awaitLength.func)
-	af.awaitLength.func = hookfunction(af.awaitLength.func, function(...)
+if ah.awaitLength.func then
+	local aI
+	aI = x(ah.awaitLength.func, function(...)
 		LPH_ATTRIBUTES(VM(NONE))
-		if c.instantequip then
+		if ad.instantequip then
 			return false
 		end
-		return as(...)
+		return aI(...)
 	end)
 end
 
-local function as(at)
-	local function au(av)
-		local aw = at:FindFirstChild(av)
-		local ax = aw and aw:FindFirstChild("Health")
-		if ax then
-			local ay = ax:GetAttribute("MaxHealth")
-			if ay and ay > 0 then
-				return ax.Value / ay
+local function aI(aJ)
+	local function aK(aL)
+		local aM = aJ:FindFirstChild(aL)
+		local aN = aM and aM:FindFirstChild("Health")
+		if aN then
+			local aO = aN:GetAttribute("MaxHealth")
+			if aO and aO > 0 then
+				return aN.Value / aO
 			end
 		end
 		return nil
 	end
-	local av, aw = au("Left Leg"), au("Right Leg")
-	if av and aw then
-		return 0.5 + (av + aw) / 4
+	local aL, aM = aK("Left Leg"), aK("Right Leg")
+	if aL and aM then
+		return 0.5 + (aL + aM) / 4
 	end
 	return nil
 end
 
-if af.movementupdate.func then
-	local at = A(af.movementupdate.func)
-	af.movementupdate.func = hookfunction(af.movementupdate.func, function(au)
+if ah.movementupdate.func then
+	local aJ
+	aJ = x(ah.movementupdate.func, function(aK)
 		LPH_ATTRIBUTES(VM(NONE))
-		if not c.omnisprint and not c.nohurtslowdown then
-			return at(au)
+		if not ad.omnisprint and not ad.nohurtslowdown then
+			return aJ(aK)
 		end
 
-		if c.omnisprint and au then
-			au.firstPerson = false
+		if ad.omnisprint and aK then
+			aK.firstPerson = false
 		end
 
-		at(au)
+		aJ(aK)
 
-		if c.nohurtslowdown and au and au.humanoid and au.character then
-			local av = as(au.character)
-			if av and av > 0 and av < 1 then
-				au.humanoid.WalkSpeed = au.humanoid.WalkSpeed / av
-				if type(au.inertialSpeed) == "number" then
-					au.inertialSpeed = au.inertialSpeed / av
+		if ad.nohurtslowdown and aK and aK.humanoid and aK.character then
+			local aL = aI(aK.character)
+			if aL and aL > 0 and aL < 1 then
+				aK.humanoid.WalkSpeed = aK.humanoid.WalkSpeed / aL
+				if type(aK.inertialSpeed) == "number" then
+					aK.inertialSpeed = aK.inertialSpeed / aL
 				end
 			end
 		end
 	end)
 end
 
-local at = s.new
-s.new = function(au)
+local aJ = q.new
+q.new = function(aK)
 	LPH_ATTRIBUTES(VM(NONE))
-	if not C then
-		if c.nodrop then
-			au.Gravity = 0
+	if not z then
+		if ad.nodrop then
+			aK.Gravity = 0
 		end
-		if c.instantbullet then
-			au.MuzzleSpeed = 1e6
-			au.K = 0
+		if ad.instantbullet then
+			aK.MuzzleSpeed = 1e6
+			aK.K = 0
 		end
 	end
-	return at(au)
+	return aJ(aK)
 end
 
-local au = k:WaitForChild("Remotes")
+local aK = i:WaitForChild("Remotes")
 
-local av = 0
-local function aw()
+local aL = 0
+local function aM()
 	LPH_ATTRIBUTES(VM(NONE))
-	local function ax(ay)
-		if not ay then
+	local function aN(aO)
+		if not aO then
 			return nil
 		end
-		for az, aA in ay:GetChildren() do
-			if aA:IsA("Tool") and aA:GetAttribute("ToolType") == "Bandage" then
-				local aB = aA:FindFirstChild("Bandages")
-				if not aB then
-					return aA
+		for S, T in aO:GetChildren() do
+			if T:IsA("Tool") and T:GetAttribute("ToolType") == "Bandage" then
+				local U = T:FindFirstChild("Bandages")
+				if not U then
+					return T
 				end
-				for aC, aD in aB:GetChildren() do
-					if aD:IsA("IntValue") and aD.Value > 0 then
-						return aA
+				for V, W in U:GetChildren() do
+					if W:IsA("IntValue") and W.Value > 0 then
+						return T
 					end
 				end
 			end
 		end
 		return nil
 	end
-	return ax(j.Character) or ax(j:FindFirstChild("Backpack"))
+	return aN(h.Character) or aN(h:FindFirstChild("Backpack"))
 end
-local function ax(ay)
+local function aN(aO)
 	LPH_ATTRIBUTES(VM(NONE))
-	if not c.autoheal then
+	if not ad.autoheal then
 		return
 	end
-	av = av + ay
-	if not c.instantheal and av < 0.75 then
+	aL = aL + aO
+	if not ad.instantheal and aL < 0.75 then
 		return
 	end
-	av = 0
+	aL = 0
 
-	local az = au:FindFirstChild("Bandage")
-	local aA = aw()
-	local aB = j.Character
-	if not (az and aA and aB) then
+	local S = aK:FindFirstChild("Bandage")
+	local T = aM()
+	local U = h.Character
+	if not (S and T and U) then
 		return
 	end
-	local aC = e("autohealmindamage", 30)
-	for aD, aE in aB:GetChildren() do
-		if aE:IsA("BasePart") and aE.Name ~= "HumanoidRootPart" then
-			local aF = aE:FindFirstChild("Health")
-			if aF then
-				local aG = aF:GetAttribute("MaxHealth")
-				if aG and aG > 0 and (aG - aF.Value) / aG * 100 >= aC then
-					az:FireServer(aA, "HealLimb", aE)
+	local V = c("autohealmindamage", 30)
+	for W, X in U:GetChildren() do
+		if X:IsA("BasePart") and X.Name ~= "HumanoidRootPart" then
+			local Y = X:FindFirstChild("Health")
+			if Y then
+				local Z = Y:GetAttribute("MaxHealth")
+				if Z and Z > 0 and (Z - Y.Value) / Z * 100 >= V then
+					S:FireServer(T, "HealLimb", X)
 				end
 			end
 		end
 	end
 end
 
-local ay = 0
-local function az(aA)
+local aO = 0
+local function S(T)
 	LPH_ATTRIBUTES(VM(NONE))
-	if not c.fastrevive then
+	if not ad.fastrevive then
 		return
 	end
-	ay = ay + aA
-	if ay < 1 then
+	aO = aO + T
+	if aO < 1 then
 		return
 	end
-	ay = 0
+	aO = 0
 
-	local aB = workspace:FindFirstChild("Characters")
-	if not aB then
+	local U = workspace:FindFirstChild("Characters")
+	if not U then
 		return
 	end
-	local aC = aB:QueryDescendants("#RevivePrompt")
-	for aD, aE in aC do
-		if aE:IsA("ProximityPrompt") then
-			aE.HoldDuration = 3
+	local V = U:QueryDescendants("#RevivePrompt")
+	for W, X in V do
+		if X:IsA("ProximityPrompt") then
+			X.HoldDuration = 3
 		end
 	end
 end
 
-local aA = {
+local T = {
 	FinalDrive = 7.5,
 	ShiftRPM = 7000,
 	IdleRPM = 1000,
@@ -2081,211 +2227,211 @@ local aA = {
 	CompressionDampingModifier = 1,
 	DamperActiveness = 0.7,
 }
-local aB = { AutoShift = true, Ackermann = true }
-local aC = {
+local U = { AutoShift = true, Ackermann = true }
+local V = {
 	ChassisType = "Wheeled",
 	DriveType = "AWD",
 	Differential = "Locked",
 }
-local aD = {}
-local aE = {}
-local aF = {}
-local aG = "{}"
-local aH = {}
-local aI = false
-local aJ = ""
-local function aK(aL)
-	local aM = aL.Name or aL.DisplayName or aL.VehicleName or aL.Id or "Unknown Car"
-	local aN = aL.Team or aL.Faction or aL.Side or "PACT"
-	aN = tostring(aN):upper():find("NATO") and "NATO" or "PACT"
-	return tostring(aM) .. " (" .. aN .. ")"
+local W = {}
+local X = {}
+local Y = {}
+local Z = "{}"
+local _ = {}
+local aP = false
+local aQ = ""
+local function aR(aS)
+	local aT = aS.Name or aS.DisplayName or aS.VehicleName or aS.Id or "Unknown Car"
+	local aU = aS.Team or aS.Faction or aS.Side or "PACT"
+	aU = tostring(aU):upper():find("NATO") and "NATO" or "PACT"
+	return tostring(aT) .. " (" .. aU .. ")"
 end
-local function aL(aM)
-	local aN
-	local aO = aM.Parent
-	while aO and aO ~= k do
-		local Q = aO.Name:upper()
-		if Q == "PACT" or Q == "NATO" then
-			aN = Q
+local function aS(aT)
+	local aU
+	local aV = aT.Parent
+	while aV and aV ~= i do
+		local aW = aV.Name:upper()
+		if aW == "PACT" or aW == "NATO" then
+			aU = aW
 			break
 		end
-		aO = aO.Parent
+		aV = aV.Parent
 	end
-	if not aN then
+	if not aU then
 		return nil
 	end
-	return aM.Name .. " (" .. aN .. ")"
+	return aT.Name .. " (" .. aU .. ")"
 end
-local function aM(aN)
-	local aO = {}
-	if type(aN) == "table" then
-		for Q, R in pairs(aN) do
-			if type(R) ~= "table" then
-				aO[Q] = R
+local function aT(aU)
+	local aV = {}
+	if type(aU) == "table" then
+		for aW, aX in pairs(aU) do
+			if type(aX) ~= "table" then
+				aV[aW] = aX
 			end
 		end
-		if type(aN.Ratios) == "table" then
-			aO.Ratios = {}
-			for Q, R in pairs(aN.Ratios) do
-				aO.Ratios[Q] = R
+		if type(aU.Ratios) == "table" then
+			aV.Ratios = {}
+			for aW, aX in pairs(aU.Ratios) do
+				aV.Ratios[aW] = aX
 			end
 		end
-		if type(aN.Wheels) == "table" then
-			aO.Wheels = {}
-			for Q, R in ipairs(aN.Wheels) do
-				aO.Wheels[Q] = {}
-				for S, T in pairs(R) do
-					aO.Wheels[Q][S] = T
+		if type(aU.Wheels) == "table" then
+			aV.Wheels = {}
+			for aW, aX in ipairs(aU.Wheels) do
+				aV.Wheels[aW] = {}
+				for aY, aZ in pairs(aX) do
+					aV.Wheels[aW][aY] = aZ
 				end
 			end
 		end
 	end
-	for Q, R in pairs(aA) do
-		aO[Q] = aN and aN[Q] ~= nil and aN[Q] or R
+	for aW, aX in pairs(T) do
+		aV[aW] = aU and aU[aW] ~= nil and aU[aW] or aX
 	end
-	for Q, R in pairs(aB) do
-		aO[Q] = aN and aN[Q] ~= nil and aN[Q] or R
+	for aW, aX in pairs(U) do
+		aV[aW] = aU and aU[aW] ~= nil and aU[aW] or aX
 	end
-	for Q, R in pairs(aC) do
-		aO[Q] = aN and aN[Q] ~= nil and aN[Q] or R
+	for aW, aX in pairs(V) do
+		aV[aW] = aU and aU[aW] ~= nil and aU[aW] or aX
 	end
-	return aO
+	return aV
 end
-local function aN()
-	aG = n:JSONEncode(aD)
-	if Options.carsprofiles and Options.carsprofiles.Value ~= aG and not aI then
-		aI = true
-		Options.carsprofiles:SetValue(aG)
-		aI = false
+local function aU()
+	Z = l:JSONEncode(W)
+	if Options.carsprofiles and Options.carsprofiles.Value ~= Z and not aP then
+		aP = true
+		Options.carsprofiles:SetValue(Z)
+		aP = false
 	end
 end
-local function aO(Q)
-	if aI then
+local function aV(aW)
+	if aP then
 		return
 	end
-	if type(Q) ~= "string" or Q == "" then
+	if type(aW) ~= "string" or aW == "" then
 		return
 	end
-	local R, S = pcall(n.JSONDecode, n, Q)
-	if R and type(S) == "table" then
-		for T, U in pairs(S) do
-			if type(U) == "table" then
-				aD[T] = aM(U)
+	local aX, aY = pcall(l.JSONDecode, l, aW)
+	if aX and type(aY) == "table" then
+		for aZ, a_ in pairs(aY) do
+			if type(a_) == "table" then
+				W[aZ] = aT(a_)
 			end
 		end
 	end
 end
-local function Q(R, S)
-	if not R or type(S) ~= "table" or type(S.Transmission) ~= "table" then
+local function aW(aX, aY)
+	if not aX or type(aY) ~= "table" or type(aY.Transmission) ~= "table" then
 		return
 	end
-	if aH[S] then
+	if _[aY] then
 		return
 	end
-	aH[S] = true
-	aF[R] = S
-	aE[#aE + 1] = R
-	if aD[R] == nil then
-		aD[R] = aM(S.Transmission)
+	_[aY] = true
+	Y[aX] = aY
+	X[#X + 1] = aX
+	if W[aX] == nil then
+		W[aX] = aT(aY.Transmission)
 	end
 end
-local function R()
-	local S = k:FindFirstChild("Shared") and k.Shared:FindFirstChild("VehicleConfigManager")
-	if S then
-		for T, U in ipairs(S:GetDescendants()) do
-			if U:IsA("ModuleScript") then
-				local V = aL(U)
-				if V then
-					local W, X = pcall(require, U)
-					if W and type(X) == "table" and rawget(X, "Transmission") then
-						for Y, Z in pairs(X.Transmission) do
-							if type(Z) == "number" and aA[Y] == nil then
-								aA[Y] = Z
-							elseif type(Z) == "boolean" and aB[Y] == nil then
-								aB[Y] = Z
-							elseif type(Z) == "string" and aC[Y] == nil then
-								aC[Y] = Z
+local function aX()
+	local aY = i:FindFirstChild("Shared") and i.Shared:FindFirstChild("VehicleConfigManager")
+	if aY then
+		for aZ, a_ in ipairs(aY:GetDescendants()) do
+			if a_:IsA("ModuleScript") then
+				local a0 = aS(a_)
+				if a0 then
+					local a1, a2 = pcall(require, a_)
+					if a1 and type(a2) == "table" and rawget(a2, "Transmission") then
+						for a3, a4 in pairs(a2.Transmission) do
+							if type(a4) == "number" and T[a3] == nil then
+								T[a3] = a4
+							elseif type(a4) == "boolean" and U[a3] == nil then
+								U[a3] = a4
+							elseif type(a4) == "string" and V[a3] == nil then
+								V[a3] = a4
 							end
 						end
-						Q(V, X)
+						aW(a0, a2)
 					end
 				end
 			end
 		end
 	end
 
-	if not S then
-		for T, U in pairs(getgc(true)) do
+	if not aY then
+		for aZ, a_ in pairs(getgc(true)) do
 			if
-				typeof(U) == "table"
-				and rawget(U, "Transmission")
-				and rawget(U, "Damage")
-				and rawget(U, "ShopInfo")
+				typeof(a_) == "table"
+				and rawget(a_, "Transmission")
+				and rawget(a_, "Damage")
+				and rawget(a_, "ShopInfo")
 			then
-				local V = U.ShopInfo
-				if type(V) == "table" then
-					local W = aK(V)
-					for X, Y in pairs(U.Transmission) do
-						if type(Y) == "number" and aA[X] == nil then
-							aA[X] = Y
-						elseif type(Y) == "boolean" and aB[X] == nil then
-							aB[X] = Y
-						elseif type(Y) == "string" and aC[X] == nil then
-							aC[X] = Y
+				local a0 = a_.ShopInfo
+				if type(a0) == "table" then
+					local a1 = aR(a0)
+					for a2, a3 in pairs(a_.Transmission) do
+						if type(a3) == "number" and T[a2] == nil then
+							T[a2] = a3
+						elseif type(a3) == "boolean" and U[a2] == nil then
+							U[a2] = a3
+						elseif type(a3) == "string" and V[a2] == nil then
+							V[a2] = a3
 						end
 					end
-					Q(W, U)
+					aW(a1, a_)
 				end
 			end
 		end
 	end
-	table.sort(aE)
-	local T = table.concat(aE, "\0")
-	if Options.carprofile and T ~= aJ then
-		aJ = T
-		Options.carprofile:SetValues(aE)
+	table.sort(X)
+	local aZ = table.concat(X, "\0")
+	if Options.carprofile and aZ ~= aQ then
+		aQ = aZ
+		Options.carprofile:SetValues(X)
 	end
 end
-R()
-local S = { selected = aE[1] }
-local function T()
-	if not c.carmods then
+aX()
+local aY = { selected = X[1] }
+local function aZ()
+	if not ad.carmods then
 		return
 	end
-	for U, V in pairs(aF) do
-		local W = aD[U]
-		if W then
-			local X = V.Transmission
-			for Y in pairs(aA) do
-				if X[Y] ~= W[Y] then
-					X[Y] = W[Y]
+	for a_, a0 in pairs(Y) do
+		local a1 = W[a_]
+		if a1 then
+			local a2 = a0.Transmission
+			for a3 in pairs(T) do
+				if a2[a3] ~= a1[a3] then
+					a2[a3] = a1[a3]
 				end
 			end
-			for Y in pairs(aB) do
-				if X[Y] ~= W[Y] then
-					X[Y] = W[Y]
+			for a3 in pairs(U) do
+				if a2[a3] ~= a1[a3] then
+					a2[a3] = a1[a3]
 				end
 			end
-			for Y in pairs(aC) do
-				if X[Y] ~= W[Y] then
-					X[Y] = W[Y]
+			for a3 in pairs(V) do
+				if a2[a3] ~= a1[a3] then
+					a2[a3] = a1[a3]
 				end
 			end
-			if W.Ratios then
-				X.Ratios = X.Ratios or {}
-				for Y, Z in pairs(W.Ratios) do
-					if X.Ratios[Y] ~= Z then
-						X.Ratios[Y] = Z
+			if a1.Ratios then
+				a2.Ratios = a2.Ratios or {}
+				for a3, a4 in pairs(a1.Ratios) do
+					if a2.Ratios[a3] ~= a4 then
+						a2.Ratios[a3] = a4
 					end
 				end
 			end
-			if W.Wheels then
-				X.Wheels = X.Wheels or {}
-				for Y, Z in ipairs(W.Wheels) do
-					X.Wheels[Y] = X.Wheels[Y] or {}
-					for _, aP in pairs(Z) do
-						if X.Wheels[Y][_] ~= aP then
-							X.Wheels[Y][_] = aP
+			if a1.Wheels then
+				a2.Wheels = a2.Wheels or {}
+				for a3, a4 in ipairs(a1.Wheels) do
+					a2.Wheels[a3] = a2.Wheels[a3] or {}
+					for a5, a6 in pairs(a4) do
+						if a2.Wheels[a3][a5] ~= a6 then
+							a2.Wheels[a3][a5] = a6
 						end
 					end
 				end
@@ -2294,337 +2440,365 @@ local function T()
 	end
 end
 
-local function aP()
-	if not S.selected then
+local function a_()
+	if not aY.selected then
 		return nil
 	end
-	aD[S.selected] = aD[S.selected] or aM()
-	return aD[S.selected]
+	W[aY.selected] = W[aY.selected] or aT()
+	return W[aY.selected]
 end
-local function U(V, W)
-	local X = aP()
-	if not X then
+local function a0(a1, a2)
+	local a3 = a_()
+	if not a3 then
 		return
 	end
-	X[V] = W
-	aN()
-	T()
+	a3[a1] = a2
+	aU()
+	aZ()
 end
-local V = 0
-local function W(X)
+local a1 = 0
+local function a2(a3)
 	LPH_ATTRIBUTES(VM(NONE))
-	if not c.carmods then
+	if not ad.carmods then
 		return
 	end
-	V = V + X
-	if V < 5 then
+	a1 = a1 + a3
+	if a1 < 5 then
 		return
 	end
-	V = 0
-	R()
-	T()
+	a1 = 0
+	aX()
+	aZ()
 end
 
-local function X(Y)
-	local Z = ar(Y)
-	if Z.clientFire then
-		return Z.clientFire
+local function a3(a4)
+	local a5 = ay(a4)
+	if a5.clientFire then
+		return a5.clientFire
 	end
-	for _, aQ in pairs(Y or {}) do
-		if af.volleyFrom(aQ) then
-			return aQ
+	for a6, a7 in pairs(a4 or {}) do
+		if ah.volleyFrom(a7) then
+			return a7
 		end
 	end
 end
-local aQ = X(af.fire.upv)
-local Y = au:WaitForChild("Weapon")
+local a4 = a3(ah.fire.upv)
+local a5 = aK:WaitForChild("Weapon")
 
-B = af.muzzlesConfig.func and debug.getupvalue(af.muzzlesConfig.func, 1)
-local Z = select(
+y = ah.muzzlesConfig.func and debug.getupvalue(ah.muzzlesConfig.func, 1)
+local a6 = select(
 	2,
 	pcall(function()
-		return require(k:WaitForChild("Shared"):WaitForChild("Ballistics"):WaitForChild("ProjectileMaterials"))
+		return require(i:WaitForChild("Shared"):WaitForChild("Ballistics"):WaitForChild("ProjectileMaterials"))
 	end)
 )
-if type(Z) ~= "table" then
-	Z = nil
+if type(a6) ~= "table" then
+	a6 = nil
 end
 
-local function _(aR, aS)
+local function a7(a8, a9)
 	LPH_ATTRIBUTES(VM(NONE))
-	local aT = B and B[aR.Name]
-	return aT and aT[aS]
+	local ba = y and y[a8.Name]
+	return ba and ba[a9]
 end
 
-local aR = RaycastParams.new()
-aR.FilterType = Enum.RaycastFilterType.Include
-local aS = RaycastParams.new()
-aS.FilterType = Enum.RaycastFilterType.Exclude
+local a8 = RaycastParams.new()
+a8.FilterType = Enum.RaycastFilterType.Include
+local a9 = RaycastParams.new()
+a9.FilterType = Enum.RaycastFilterType.Exclude
 
-local function aT(aU, aV, aW)
+
+
+
+
+local function ba(bb, bc, bd, be)
 	LPH_ATTRIBUTES(VM(NONE))
-	local aX = aR
-	aX.FilterType = Enum.RaycastFilterType.Include
-	aX.FilterDescendantsInstances = { aW }
-	local aY = aU + aV * 60
-	local aZ = workspace:Raycast(aY, -aV * 60, aX)
-	return aZ and aZ.Position or nil
+	local bf = a8
+	bf.FilterDescendantsInstances = { bd }
+	local bg = workspace:Raycast(bb + bc * be, -bc * be, bf)
+	if bg then
+		return bg.Position, (bg.Position - bb).Magnitude
+	end
+	return nil, nil
 end
 
-local function aU(aV, aW, aX, aY, aZ)
+local bb = game.FindFirstAncestorOfClass
+local function bc(bd, be, bf, bg, bh)
 	LPH_ATTRIBUTES(VM(NONE))
-	if not aY or aY <= 0 then
+	if not bg or bg <= 0 then
 		return false
 	end
-	local a_ = aY
-	local a0 = aV
-	for a1 = 1, 8 do
-		local a2 = aW - a0
-		local a3 = a2.Magnitude
-		if a3 < 0.1 then
+	local bi = be - bd
+	local bj = bi.Magnitude
+	if bj < 0.1 then
+		return true
+	end
+	local bk = bi / bj
+	local bl = bg
+	local bm = bd
+	local bn = table.clone(bh)
+	local bo = #bn
+	for bp = 1, 16 do
+		a9.FilterDescendantsInstances = bn
+		local bq = workspace:Raycast(bm, be - bm, a9)
+		if not bq then
 			return true
 		end
-		local a4 = a2.Unit
-		aS.FilterDescendantsInstances = aZ
-		local a5 = workspace:Raycast(a0, a4 * a3, aS)
-		if not a5 then
+		local br = bq.Instance
+		if Q(br, bf) then
 			return true
 		end
-		if a5.Instance:IsDescendantOf(aX) then
-			return true
-		end
-		local a6 = aT(a5.Position, a4, a5.Instance)
-		if not a6 then
+		local bs = br:GetAttribute("PenThreshold")
+		if type(bs) == "number" and bg < bs then
 			return false
 		end
-		local a7 = (a6 - a5.Position).Magnitude
-		local a8 = Z and Z.getPenetration(a5.Material) or 1
-		a_ = a_ - a7 * a8
-		if a_ <= 0 then
+		if bq.Material == Enum.Material.Water or br:IsA("Terrain") then
 			return false
 		end
-		a0 = a6 + a4 * 0.05
+		local bt = bb(br, "Accessory")
+		if bt and (bt.Name == "CustomHelmet" or bt.Name == "CustomArmor") then
+			return false
+		end
+		local bu = bb(br, "Model")
+		local bv = bu ~= nil and P(bu, "Humanoid") ~= nil
+		local bw, bx = ba(bq.Position, bk, br, bl)
+		if not bw then
+			return false
+		end
+		local by = bx * (bv and 0.3 or (a6 and a6.getPenetration(bq.Material) or 1))
+		if by > bl then
+			return false
+		end
+		bl -= by
+		bn[bo + bp] = br
+		bm = bw + bk * 0.01
 	end
 	return false
 end
 
-local function aV(aW, aX, aY, aZ, a_)
+local function bd(be, bf, bg, bh, bi)
 	LPH_ATTRIBUTES(VM(NONE))
-	local a0 = aX - aW
-	aS.FilterDescendantsInstances = a_
-	local a1 = workspace:Raycast(aW, a0, aS)
-	if not a1 then
+	a9.FilterDescendantsInstances = bi
+	local bj = workspace:Raycast(be, bf - be, a9)
+	if not bj or Q(bj.Instance, bg) then
 		return true
 	end
-	if a1.Instance:IsDescendantOf(aY) then
-		return true
-	end
-	if not c.ragebotwallbang then
+	if not ad.ragebotwallbang then
 		return false
 	end
-	return aU(aW, aX, aY, aZ, a_)
+	return bc(be, bf, bg, bh, bi)
 end
 
-ak = function(aW, aX, aY, aZ, a_)
+am = function(be, bf, bg, bh, bi)
 	LPH_ATTRIBUTES(VM(NONE))
-	if not c.manipulation or not aW or not aX then
-		return aW
+	if not ad.manipulation or not be or not bf then
+		return be
 	end
-	local a0 = o.solve(aW, aX, c.manipulationdistance or 1, c.manipulationdepth or "Low", function(a0, a1)
-		if not aY then
+	local bj = m.solve(be, bf, ad.manipulationdistance or 1, ad.manipulationdepth or "Low", function(bj, bk)
+		if not bg then
 			return true
 		end
-		return aV(a0, a1, aY, aZ, a_)
-	end, a_, 1)
-	if not a0 then
+		return bd(bj, bk, bg, bh, bi)
+	end, bi, 1)
+	if not bj then
 		return nil
 	end
-	return a0
+	return bj
 end
 
-local function aW(aX, aY)
-	local aZ = buffer.create(3)
-	buffer.writeu8(aZ, 0, 1)
-	buffer.writeu8(aZ, 1, aX)
-	buffer.writeu8(aZ, 2, aY)
-	Y:FireServer(aZ)
+local function be(bf, bg)
+	local bh = buffer.create(3)
+	buffer.writeu8(bh, 0, 1)
+	buffer.writeu8(bh, 1, bf)
+	buffer.writeu8(bh, 2, bg)
+	a5:FireServer(bh)
 end
 
-local aX = { "Head", "Torso", "HumanoidRootPart", "Left Arm", "Right Arm", "Left Leg", "Right Leg" }
-local function aY(aZ, a_, a0, a1)
+local bf = { "Head", "Torso", "HumanoidRootPart", "Left Arm", "Right Arm", "Left Leg", "Right Leg" }
+local function bg(bh, bi, bj, bk)
 	LPH_ATTRIBUTES(VM(NONE))
-	for a2, a3 in aX do
-		local a4 = aZ:FindFirstChild(a3)
-		if a4 and a4:IsA("BasePart") then
-			if aV(a_, a4.Position, aZ, a0, a1) then
-				return a4, a_
+	for bl, bm in bf do
+		local bn = bh:FindFirstChild(bm)
+		if bn and bn:IsA("BasePart") then
+			if bd(bi, bn.Position, bh, bj, bk) then
+				return bn, bi
 			end
 		end
 	end
 	return nil
 end
 
-local aZ = 0
-local a_ = 0
-local a0 = nil
-local a1 = setmetatable({}, { __mode = "k" })
-local a2 = require(x.BodyReplication)
+local bh = 0
+local bi = 0
+local bj = nil
+local bk = setmetatable({}, { __mode = "k" })
+local bl = require(t.BodyReplication)
 
-local function a3(a4)
+local function bm(bn)
 	LPH_ATTRIBUTES(VM(NONE))
-	local a5 = a1[a4]
-	if a5 and rawget(a5, "tool") == a4 and rawget(a5, "currentMuzzle") then
-		return a5
+	local bo = bk[bn]
+	if bo and rawget(bo, "tool") == bn and rawget(bo, "currentMuzzle") then
+		return bo
 	end
 	if not getgc then
 		return nil
 	end
-	for a6, a7 in getgc(true) do
-		if type(a7) == "table" and rawget(a7, "tool") == a4 and rawget(a7, "currentMuzzle") then
-			a1[a4] = a7
-			return a7
+	for bp, bq in getgc(true) do
+		if type(bq) == "table" and rawget(bq, "tool") == bn and rawget(bq, "currentMuzzle") then
+			bk[bn] = bq
+			return bq
 		end
 	end
 	return nil
 end
 
-local function a4(a5)
+local function bn(bo)
 	LPH_ATTRIBUTES(VM(NONE))
-	local a6 = workspace.CurrentCamera
-	if not (a6 and a5) then
+	local bp = workspace.CurrentCamera
+	if not (bp and bo) then
 		return nil
 	end
-	local a7 = (a6.CFrame.Position - a6.Focus.Position).Magnitude <= 0.75
-	local a8 = a7 and a5.viewmodelAttachment or a5.attachment
-	if not a8 then
+	local bq = (bp.CFrame.Position - bp.Focus.Position).Magnitude <= 0.75
+	local br = bq and bo.viewmodelAttachment or bo.attachment
+	if not br then
 		return nil
 	end
-	local a9 = a8.WorldPosition
-	local ba = a8.WorldCFrame.LookVector
-	local bb = j.Character
-	local bc = bb and bb:FindFirstChild("Right Arm")
-	if bc then
-		local bd = (a9 - bc.CFrame.Position).Magnitude
-		aS.FilterType = Enum.RaycastFilterType.Exclude
-		aS.FilterDescendantsInstances = { bb, workspace:FindFirstChild("Ignore") }
-		local be = workspace:Raycast(a9 - ba * bd, ba * bd, aS)
-		if be then
-			a9 = be.Position - ba * math.min(0.01, be.Distance)
+	local bs = br.WorldPosition
+	local bt = br.WorldCFrame.LookVector
+	local bu = h.Character
+	local bv = bu and bu:FindFirstChild("Right Arm")
+	if bv then
+		local bw = (bs - bv.CFrame.Position).Magnitude
+		a9.FilterType = Enum.RaycastFilterType.Exclude
+		a9.FilterDescendantsInstances = { bu, workspace:FindFirstChild("Ignore") }
+		local bx = workspace:Raycast(bs - bt * bw, bt * bw, a9)
+		if bx then
+			bs = bx.Position - bt * math.min(0.01, bx.Distance)
 		end
 	end
-	return a9
+	return bs
 end
 
-local function a5()
+local function bo()
 	LPH_ATTRIBUTES(VM(NONE))
-	local a6 = j.Character
-	local a7 = af.volleyFrom(aQ) or af.fireVolleyFn
-	if not (a6 and a7) then
+	local bp = h.Character
+	local bq = ah.volleyFrom(a4) or ah.fireVolleyFn
+	if not (bp and bq) then
 		return
 	end
-	local a8 = ac()
-	if not a8 then
+	local br = ae()
+	if not br then
 		return
 	end
-	local a9 = a3(a8)
-	local ba = a9 and a9.currentMuzzle
-	if not (ba and ba.tool) then
+	local bs = bm(br)
+	local bt = bs and bs.currentMuzzle
+	if not (bt and bt.tool) then
 		return
 	end
-	local bb = a4(ba)
-	if not bb then
+	local bu = bn(bt)
+	if not bu then
 		return
 	end
-	local bc = ba.magazine and ba.magazine:getBulletIndex()
-	if not bc then
-		return
-	end
-
-	local bd = ba.index
-	local be = _(a8, bd)
-	local bf = (be and be.Firerate) or 600
-	local bg = (be and be.Ammo) or 30
-	local bh = (be and be.ReloadTime) or 3
-	local bi = be and be.BulletSettings and be.BulletSettings[bc]
-	local bj = (bi and bi.Penetration) or 0
-
-	if a8 ~= a0 then
-		a0 = a8
-		H = 0
-		a_ = 0
-	end
-
-	if os.clock() < a_ then
+	local bv = bt.magazine and bt.magazine:getBulletIndex()
+	if not bv then
 		return
 	end
 
-	if bg > 0 and H >= bg then
-		if c.ragebotautoreload then
-			aW(bd, bc)
-			a_ = os.clock() + bh
-			H = 0
+	local bw = bt.index
+	local bx = a7(br, bw)
+	local by = (bx and bx.Firerate) or 600
+	local bz = (bx and bx.Ammo) or 30
+	local bA = (bx and bx.ReloadTime) or 3
+	local bB = bx and bx.BulletSettings and bx.BulletSettings[bv]
+	local bC = ((bB and bB.Penetration) or 0) / 10
+
+	if br ~= bj then
+		bj = br
+		E = 0
+		bi = 0
+	end
+
+	if os.clock() < bi then
+		return
+	end
+
+	if bz > 0 and E >= bz then
+		if ad.ragebotautoreload then
+			be(bw, bv)
+			bi = os.clock() + bA
+			E = 0
 		end
 		return
 	end
 
-	if os.clock() < aZ then
+	if os.clock() < bh then
 		return
 	end
 
-	local bk = { a6 }
-	local bl = workspace:FindFirstChild("Ignore")
-	if bl then
-		bk[#bk + 1] = bl
+	local bD = { bp }
+	local bE = workspace:FindFirstChild("Ignore")
+	if bE then
+		bD[#bD + 1] = bE
 	end
 
-	local bm = j
-	local bn = {}
-	for bo, bp in ipairs(g:GetPlayers()) do
-		if bp ~= bm and bp.Character and not G(bp.Character) then
-			if not (bm.Team and bp.Team == bm.Team) then
-				local bq = bp.Character:FindFirstChildOfClass("Humanoid")
-				local br = bp.Character:FindFirstChild("HumanoidRootPart") or bp.Character:FindFirstChild("Head")
-				if bq and bq.Health > 0 and br then
-					local bs = (br.Position - bb).Magnitude
-					bn[#bn + 1] = { Character = bp.Character, Distance = bs }
-				end
-			end
+	local bF = h
+	local bG = bF.Team
+	local bH = b("ragebotrangecheck", false) and c("ragebotmaxrange", 500)
+	local bI = bH and bH * bH
+	local bJ = {}
+	for bK, bL in e:GetPlayers() do
+		local bM = bL.Character
+		if bL == bF or not bM or (bG and bL.Team == bG) then
+			continue
+		end
+		local bN = O(bM, "HumanoidRootPart") or O(bM, "Head")
+		if not bN then
+			continue
+		end
+		local bO = bN.Position - bu
+		local bP = bO:Dot(bO)
+		if bI and bP > bI then
+			continue
+		end
+		local bQ = P(bM, "Humanoid")
+		if bQ and bQ.Health > 0 and not D(bM) then
+			bJ[#bJ + 1] = { Character = bM, Distance = bP }
 		end
 	end
 
-	table.sort(bn, function(bo, bp)
-		return bo.Distance < bp.Distance
+	table.sort(bJ, function(bK, bL)
+		return bK.Distance < bL.Distance
 	end)
-	local bo
-	for bp, bq in ipairs(bn) do
-		bo = aY(bq.Character, bb, bj, bk)
-		if bo then
+	local bK
+	for bL, bM in ipairs(bJ) do
+		bK = bg(bM.Character, bu, bC, bD)
+		if bK then
 			break
 		end
 	end
-	local bp = bb
-	local bq = bo
-	if c.manipulation and ak then
-		bq = nil
-		bp = nil
-		local br = {}
-		if bo then
-			br[1] = bo.Parent
+	local bL = bu
+	local bM = bK
+	if ad.manipulation and am then
+		bM = nil
+		bL = nil
+		local bN = {}
+		if bK then
+			bN[1] = bK.Parent
 		end
-		for bs, bt in bn do
-			if bt.Character ~= (bo and bo.Parent) then
-				br[#br + 1] = bt.Character
+		for bO, bP in bJ do
+			if bP.Character ~= (bK and bK.Parent) then
+				bN[#bN + 1] = bP.Character
 			end
 		end
-		for bs, bt in br do
-			local bu = bt:FindFirstChild("Head") or bt:FindFirstChild("HumanoidRootPart")
-			if bu then
-				local bv = ak(bb, bu.Position, bt, bj, bk)
-				if bv then
-					local bw = aY(bt, bv, bj, bk)
-					if bw then
-						bq = bw
-						bp = bv
+		for bO, bP in bN do
+			local bQ = bP:FindFirstChild("Head") or bP:FindFirstChild("HumanoidRootPart")
+			if bQ then
+				local bR = am(bu, bQ.Position, bP, bC, bD)
+				if bR then
+					local bS = bg(bP, bR, bC, bD)
+					if bS then
+						bM = bS
+						bL = bR
 						break
 					end
 				end
@@ -2632,261 +2806,292 @@ local function a5()
 		end
 	end
 
-	if bq and bp and af.fire.func then
-		aZ = os.clock() + 60 / bf
-		local br = bq.Position
-		if E(be, bi) then
-			br = F(bp, bq, be, bi)
+	if bM and bL and ah.fire.func then
+		local bN = bM.Position
+		if B(bx, bB) then
+			bN = C(bL, bM, bx, bB)
 		end
-		am = bp
-		al = br
-		local bs = pcall(af.fire.func, ba, bc)
-		am = nil
-		al = nil
-		if not bs then
-			aZ = 0
+		
+		
+		
+		local bO = (bN - bL).Unit
+		local bP = O(bp, "HumanoidRootPart")
+		if bP then
+			local bQ = ad.antiaimspin
+			if bQ or math.abs(ax(bP, bO)) > 2.2 then
+				av(bO, 0.5)
+				if not bQ then
+					at.faceRoot = true
+				end
+				local bR = h:GetNetworkPing() * 2 + 0.05
+				if os.clock() - at.since < bR then
+					return
+				end
+			end
+		end
+		bh = os.clock() + 60 / by
+		ap = bL
+		an = bN
+		ao = bM
+		local bQ = pcall(ah.fire.func, bt, bv)
+		ap = nil
+		an = nil
+		ao = nil
+		if not bQ then
+			bh = 0
 		end
 	end
 end
 
-local a6 = 0
-local function a7()
+local bp = 0
+local function bq()
 	LPH_ATTRIBUTES(VM(NONE))
-	if not c.ragebottpaura then
+	if not ad.ragebottpaura then
 		return
 	end
-	if os.clock() - a6 < 2.0 then
+	if os.clock() - bp < 2.0 then
 		return
 	end
 
-	local a8 = j
-	local a9 = a8.Character
-	if not a9 then
+	local br = h
+	local bs = br.Character
+	if not bs then
 		return
 	end
-	local ba = a9:FindFirstChild("HumanoidRootPart")
-	local bb = a9:FindFirstChild("Head") or ba
-	if not (ba and bb) then
+	local bt = bs:FindFirstChild("HumanoidRootPart")
+	local bu = bs:FindFirstChild("Head") or bt
+	if not (bt and bu) then
 		return
 	end
-	local bc = bb.Position
+	local bv = bu.Position
 
-	local bd = { a9 }
-	local be = workspace:FindFirstChild("Ignore")
-	if be then
-		bd[#bd + 1] = be
+	local bw = { bs }
+	local bx = workspace:FindFirstChild("Ignore")
+	if bx then
+		bw[#bw + 1] = bx
 	end
 
-	local bf = false
-	local bg, bh
+	local by = false
+	local bz, bA
 
-	for bi, bj in ipairs(g:GetPlayers()) do
-		if bj ~= a8 and bj.Character and not G(bj.Character) then
-			if not (a8.Team and bj.Team == a8.Team) then
-				local bk = bj.Character:FindFirstChildOfClass("Humanoid")
-				local bl = bj.Character:FindFirstChild("HumanoidRootPart")
-				local bm = bj.Character:FindFirstChild("Head") or bl
-				if bk and bk.Health > 0 and bl then
-					local bn = bm.Position - bc
-					local bo = RaycastParams.new()
-					bo.FilterType = Enum.RaycastFilterType.Exclude
-					bo.FilterDescendantsInstances = bd
-					local bp = workspace:Raycast(bc, bn, bo)
+	for bB, bC in ipairs(e:GetPlayers()) do
+		if bC ~= br and bC.Character and not D(bC.Character) then
+			if not (br.Team and bC.Team == br.Team) then
+				local bD = bC.Character:FindFirstChildOfClass("Humanoid")
+				local bE = bC.Character:FindFirstChild("HumanoidRootPart")
+				local bF = bC.Character:FindFirstChild("Head") or bE
+				if bD and bD.Health > 0 and bE then
+					local bG = bF.Position - bv
+					local bH = RaycastParams.new()
+					bH.FilterType = Enum.RaycastFilterType.Exclude
+					bH.FilterDescendantsInstances = bw
+					local bI = workspace:Raycast(bv, bG, bH)
 
-					if not bp or bp.Instance:IsDescendantOf(bj.Character) then
-						bf = true
+					if not bI or bI.Instance:IsDescendantOf(bC.Character) then
+						by = true
 						break
 					end
 
-					local bq = (bl.Position - bc).Magnitude
-					if not bh or bq < bh then
-						bg = bj.Character
-						bh = bq
+					local bJ = (bE.Position - bv).Magnitude
+					if not bA or bJ < bA then
+						bz = bC.Character
+						bA = bJ
 					end
 				end
 			end
 		end
 	end
 
-	if not bf and bg then
-		local bi = bg:FindFirstChild("HumanoidRootPart")
-		if bi and ba then
-			a6 = os.clock()
-			ba.CFrame = bi.CFrame * CFrame.new(0, 0, 3)
+	if not by and bz then
+		local bB = bz:FindFirstChild("HumanoidRootPart")
+		if bB and bt then
+			bp = os.clock()
+			bt.CFrame = bB.CFrame * CFrame.new(0, 0, 3)
 		end
 	end
 end
 
-local a8 = 0
-local function a9(ba)
+local br = 0
+local function bs(bt)
 	LPH_ATTRIBUTES(VM(NONE))
-	if not (c.ragebot or c.ragebottpaura) then
+	if not (ad.ragebot or ad.ragebottpaura) then
 		return
 	end
-	a8 = a8 + ba
-	if a8 < 0.03 then
+	
+	if at.faceRoot then
+		local bu = aw()
+		local bv = h.Character
+		local bw = bu and bv and O(bv, "HumanoidRootPart")
+		if bw then
+			bw.CFrame = CFrame.new(bw.Position) * CFrame.Angles(0, math.atan2(-bu.X, -bu.Z), 0)
+		else
+			at.faceRoot = false
+		end
+	end
+	br = br + bt
+	if br < 0.03 then
 		return
 	end
-	a8 = 0
-	if c.ragebot then
-		pcall(a5)
+	br = 0
+	if ad.ragebot then
+		pcall(bo)
 	end
-	if c.ragebottpaura then
-		pcall(a7)
+	if ad.ragebottpaura then
+		pcall(bq)
 	end
 end
 
-local ba
-local bb, bc = pcall(function()
+local bt
+local bu, bv = pcall(function()
 	LPH_ATTRIBUTES(VM(NONE))
 	return loadstring(
 		game:HttpGet("https://raw.githubusercontent.com/ttokennxyz/vaultcc/refs/heads/main/esplibcoldwar.lua")
 	)()
 end)
 
-if bb and type(bc) == "table" then
+if bu and type(bv) == "table" then
 
 	pcall(function()
-		bc:Load({ Enabled = false, Players = false, LocalPlayer = false, LimitFPS = 45, DynamicBoxes = false })
-		ba = bc:GetConfig()
+		bv:Load({ Enabled = false, Players = false, LocalPlayer = false, LimitFPS = 45, DynamicBoxes = false })
+		bt = bv:GetConfig()
 	end)
 else
-	print(bc)
-	bc = nil
-	l:Notify("Failed to load ESP library.")
+	print(bv)
+	bv = nil
+	j:Notify("Failed to load ESP library.")
 end
-	b.ESP = bc
+	ac.ESP = bv
 
-local function bd()
-	local be = ba
-	if not be then
+local function bw()
+	local bx = bt
+	if not bx then
 		return
 	end
 
-	be.Enabled = Toggles.ESPMaster.Value
-	be.LocalPlayer = false
-	be.MaxDistance = Options.ESPMaxDistance.Value
-	be.LimitFPS = 45
-	be.DynamicBoxes = false
-	be.DynamicBoxesCheap = true
-	be.DynamicBoxesIncludeAll = false
+	bx.Enabled = Toggles.ESPMaster.Value
+	bx.LocalPlayer = false
+	bx.MaxDistance = Options.ESPMaxDistance.Value
+	bx.LimitFPS = 45
+	bx.DynamicBoxes = false
+	bx.DynamicBoxesCheap = true
+	bx.DynamicBoxesIncludeAll = false
 
-	be.Boxes = Toggles.ESPBoxes.Value
-	be.BoxType = Options.ESPBoxType.Value
-	be.BoxColor = Options.ESPBoxColor.Value
-	be.BoxThickness = Options.ESPBoxThickness.Value
-	be.Outlines.Style = Toggles.ESPBoxOutline.Value and "Full" or "None"
-	be.Outlines.Color = Options.ESPBoxOutlineColor.Value
+	bx.Boxes = Toggles.ESPBoxes.Value
+	bx.BoxType = Options.ESPBoxType.Value
+	bx.BoxColor = Options.ESPBoxColor.Value
+	bx.BoxThickness = Options.ESPBoxThickness.Value
+	bx.Outlines.Style = Toggles.ESPBoxOutline.Value and "Full" or "None"
+	bx.Outlines.Color = Options.ESPBoxOutlineColor.Value
 
-	be.BoxFill.Enabled = Toggles.ESPBoxFill.Value
-	be.BoxFill.Color = Options.ESPBoxFillColor.Value
-	be.BoxFill.Transparency = Options.ESPBoxFillTransparency.Value
+	bx.BoxFill.Enabled = Toggles.ESPBoxFill.Value
+	bx.BoxFill.Color = Options.ESPBoxFillColor.Value
+	bx.BoxFill.Transparency = Options.ESPBoxFillTransparency.Value
 
-	be.Names = Toggles.ESPNames.Value
-	be.TextColor = Options.ESPNameColor.Value
-	be.TextSize = Options.ESPTextSize.Value
-	be.TextOutline = Toggles.ESPTextOutline.Value
-	be.Distance.Enabled = Toggles.ESPDistance.Value
-	be.Distance.Color = Options.ESPDistanceColor.Value
-	be.Weapon.Enabled = Toggles.ESPWeapon.Value
-	be.Weapon.UseToolFallback = true
-	be.TeamIndicator.Enabled = Toggles.ESPTeam.Value
-	be.FriendlyIndicator.Enabled = Toggles.ESPFriendly.Value
-	be.FriendlyIndicator.CheckTeam = Toggles.ESPFriendly.Value
-	be.FriendlyIndicator.CheckFriends = Toggles.ESPFriendly.Value
+	bx.Names = Toggles.ESPNames.Value
+	bx.TextColor = Options.ESPNameColor.Value
+	bx.TextSize = Options.ESPTextSize.Value
+	bx.TextOutline = Toggles.ESPTextOutline.Value
+	bx.Distance.Enabled = Toggles.ESPDistance.Value
+	bx.Distance.Color = Options.ESPDistanceColor.Value
+	bx.Weapon.Enabled = Toggles.ESPWeapon.Value
+	bx.Weapon.UseToolFallback = true
+	bx.TeamIndicator.Enabled = Toggles.ESPTeam.Value
+	bx.FriendlyIndicator.Enabled = Toggles.ESPFriendly.Value
+	bx.FriendlyIndicator.CheckTeam = Toggles.ESPFriendly.Value
+	bx.FriendlyIndicator.CheckFriends = Toggles.ESPFriendly.Value
 
-	be.HealthBar.Enabled = Toggles.ESPHealth.Value
-	be.HealthBar.ShowText = true
-	be.HealthBar.Source = (Options.ESPHealthMode.Value == "Target part") and "Part" or "Average"
-	be.HealthBar.Part = e("silenttarget", "Head")
+	bx.HealthBar.Enabled = Toggles.ESPHealth.Value
+	bx.HealthBar.ShowText = true
+	bx.HealthBar.Source = (Options.ESPHealthMode.Value == "Target part") and "Part" or "Average"
+	bx.HealthBar.Part = c("silenttarget", "Head")
 
-	be.Chams.Enabled = Toggles.ESPChams.Value
-	be.Chams.Type = Options.ESPChamsType.Value
+	bx.Chams.Enabled = Toggles.ESPChams.Value
+	bx.Chams.Type = Options.ESPChamsType.Value
 
-	local bf = Options.ESPChamsFill.Value
-	local bg = Options.ESPChamsFillT.Value
-	local bh = Options.ESPChamsOutline.Value
-	local bi = Options.ESPChamsOutlineT.Value
-	local bj = Toggles.ESPChamsVisible.Value
+	local by = Options.ESPChamsFill.Value
+	local bz = Options.ESPChamsFillT.Value
+	local bA = Options.ESPChamsOutline.Value
+	local bB = Options.ESPChamsOutlineT.Value
+	local bC = Toggles.ESPChamsVisible.Value
 
-	be.Chams.Highlight.FillColor = bf
-	be.Chams.Highlight.FillTransparency = bg
-	be.Chams.Highlight.OutlineColor = bh
-	be.Chams.Highlight.OutlineTransparency = bi
-	be.Chams.Highlight.VisibleCheck = bj
+	bx.Chams.Highlight.FillColor = by
+	bx.Chams.Highlight.FillTransparency = bz
+	bx.Chams.Highlight.OutlineColor = bA
+	bx.Chams.Highlight.OutlineTransparency = bB
+	bx.Chams.Highlight.VisibleCheck = bC
 
-	be.Chams.MeshChams.FillColor = bf
-	be.Chams.MeshChams.FillTransparency = bg
-	be.Chams.MeshChams.OutlineColor = bh
-	be.Chams.MeshChams.OutlineTransparency = bi
-	be.Chams.MeshChams.VisibleCheck = bj
+	bx.Chams.MeshChams.FillColor = by
+	bx.Chams.MeshChams.FillTransparency = bz
+	bx.Chams.MeshChams.OutlineColor = bA
+	bx.Chams.MeshChams.OutlineTransparency = bB
+	bx.Chams.MeshChams.VisibleCheck = bC
 
-	be.Chams.Adornment.Color = bf
-	be.Chams.Adornment.Transparency = bg
-	be.Chams.Adornment.VisibleCheck = bj
+	bx.Chams.Adornment.Color = by
+	bx.Chams.Adornment.Transparency = bz
+	bx.Chams.Adornment.VisibleCheck = bC
 
-	be.Flags.Enabled = Toggles.ESPFlags.Value
-	be.Flags.Options.Idle = Toggles.ESPFlagIdle.Value
-	be.Flags.Options.Moving = Toggles.ESPFlagMoving.Value
-	be.Flags.Options.Jumping = Toggles.ESPFlagJumping.Value
-	be.Flags.Options.Swimming = Toggles.ESPFlagSwimming.Value
-	be.OffScreenArrows.Enabled = Toggles.ESPArrows.Value
-	be.OffScreenArrows.Color = Options.ESPArrowColor.Value
-	be.OffScreenArrows.Size = Options.ESPArrowSize.Value
+	bx.Flags.Enabled = Toggles.ESPFlags.Value
+	bx.Flags.Options.Idle = Toggles.ESPFlagIdle.Value
+	bx.Flags.Options.Moving = Toggles.ESPFlagMoving.Value
+	bx.Flags.Options.Jumping = Toggles.ESPFlagJumping.Value
+	bx.Flags.Options.Swimming = Toggles.ESPFlagSwimming.Value
+	bx.OffScreenArrows.Enabled = Toggles.ESPArrows.Value
+	bx.OffScreenArrows.Color = Options.ESPArrowColor.Value
+	bx.OffScreenArrows.Size = Options.ESPArrowSize.Value
 end
 
-local function be()
-	local bf = ba
-	if not bf then
+local function bx()
+	local by = bt
+	if not by then
 		return
 	end
 
-	local bg = j
+	local bz = h
 
 	if Toggles.ESPFilterTeam.Value then
-		bf.Players = false
-		local bh = {}
-		for bi, bj in ipairs(g:GetPlayers()) do
-			if bj ~= bg and bj.Character then
+		by.Players = false
+		local bA = {}
+		for bB, bC in ipairs(e:GetPlayers()) do
+			if bC ~= bz and bC.Character then
 
-				if not (bg.Team and bj.Team == bg.Team) then
-					bh[#bh + 1] = { DisplayName = bj.Name, Path = bj.Character:GetFullName() }
+				if not (bz.Team and bC.Team == bz.Team) then
+					bA[#bA + 1] = { DisplayName = bC.Name, Path = bC.Character:GetFullName() }
 				end
 			end
 		end
-		bf.Directories = bh
+		by.Directories = bA
 	else
 
-		bf.Players = true
-		bf.Directories = {}
+		by.Players = true
+		by.Directories = {}
 	end
 end
 
-local bf = m.Combat:AddRightGroupbox("Gun Mods")
-bf:AddSlider("recoilmult", { Text = "Recoil Multiplier", Default = 0, Min = 0, Max = 1, Rounding = 2 })
-bf:AddSlider("spreadmult", { Text = "Spread Multiplier", Default = 0, Min = 0, Max = 1, Rounding = 2 })
-bf:AddToggle("forceauto", { Text = "Force Auto", Default = true })
-bf:AddToggle("instantequip", { Text = "Instant Equip", Default = false })
-bf:AddToggle("nodrop", { Text = "No Bullet Drop", Default = false })
-bf:AddToggle("instantbullet", { Text = "Instant Bullet", Default = false })
-bf:AddToggle(
+local by = k.Combat:AddRightGroupbox("Gun Mods")
+by:AddSlider("recoilmult", { Text = "Recoil Multiplier", Default = 0, Min = 0, Max = 1, Rounding = 2 })
+by:AddSlider("spreadmult", { Text = "Spread Multiplier", Default = 0, Min = 0, Max = 1, Rounding = 2 })
+by:AddToggle("forceauto", { Text = "Force Auto", Default = true })
+by:AddToggle("instantequip", { Text = "Instant Equip", Default = false })
+by:AddToggle("nodrop", { Text = "No Bullet Drop", Default = false })
+by:AddToggle("instantbullet", { Text = "Instant Bullet", Default = false })
+by:AddToggle(
 	"rpgprediction",
 	{
 		Text = "RPG Prediction",
 		Default = true,
 	}
 )
-bf:AddSlider(
+by:AddSlider(
 	"rpgpredictionstrength",
 	{ Text = "RPG Prediction Strength", Default = 1, Min = 0, Max = 2, Rounding = 2 }
 )
 
-local bg = m.Combat:AddLeftGroupbox("Aiming")
-bg
+local bz = k.Combat:AddLeftGroupbox("Aiming")
+bz
 	:AddToggle("aimbotenabled", { Text = "Aimbot Enabled", Default = false })
 	:AddKeyPicker("aimbotkey", { Default = "R", SyncToggleState = false, Mode = "Hold", Text = "Aimbot Key" })
-bg:AddDropdown("aimbotmethod", { Text = "Aim Method", Values = { "Camera", "Mouse" }, Default = 1, Multi = false })
-bg:AddDropdown(
+bz:AddDropdown("aimbotmethod", { Text = "Aim Method", Values = { "Camera", "Mouse" }, Default = 1, Multi = false })
+bz:AddDropdown(
 	"aimbottarget",
 	{
 		Text = "Target part",
@@ -2895,7 +3100,7 @@ bg:AddDropdown(
 		Multi = false,
 	}
 )
-bg:AddSlider(
+bz:AddSlider(
 	"aimbotsmoothness",
 	{
 		Text = "Smoothness",
@@ -2905,12 +3110,12 @@ bg:AddSlider(
 		Rounding = 1,
 	}
 )
-bg:AddToggle("aimanywhere", { Text = "Aim Anywhere", Default = true })
-bg:AddToggle("instantads", { Text = "Instant ADS", Default = true })
-bg:AddToggle("noadsslowdown", { Text = "No ADS Slowdown", Default = true })
+bz:AddToggle("aimanywhere", { Text = "Aim Anywhere", Default = true })
+bz:AddToggle("instantads", { Text = "Instant ADS", Default = true })
+bz:AddToggle("noadsslowdown", { Text = "No ADS Slowdown", Default = true })
 
-local bh = m.Combat:AddLeftGroupbox("Silent Aim")
-bh
+local bA = k.Combat:AddLeftGroupbox("Silent Aim")
+bA
 	:AddToggle(
 		"silentenabled",
 		{ Text = "Normal Silent Aim", Default = true }
@@ -2919,7 +3124,7 @@ bh
 		"silentbind",
 		{ Default = "None", SyncToggleState = true, Mode = "Toggle", Text = "Normal Silent Aim" }
 	)
-bh
+bA
 	:AddToggle(
 		"turretsilentenabled",
 		{ Text = "Turret Silent Aim", Default = true }
@@ -2928,7 +3133,7 @@ bh
 		"turretsilentbind",
 		{ Default = "None", SyncToggleState = true, Mode = "Toggle", Text = "Turret Silent Aim" }
 	)
-bh:AddDropdown(
+bA:AddDropdown(
 	"silenttarget",
 	{
 		Text = "Target part",
@@ -2937,56 +3142,58 @@ bh:AddDropdown(
 		Multi = false,
 	}
 )
-Options["silenttarget"]:OnChanged(function(bi)
-	if ba then
-		ba.HealthBar.Part = bi
+Options["silenttarget"]:OnChanged(function(bB)
+	if bt then
+		bt.HealthBar.Part = bB
 	end
 end)
-bh:AddToggle(
+bA:AddToggle(
 	"silentvisiblecheck",
 	{ Text = "Visible Check", Default = false }
 )
-bh:AddToggle(
+bA:AddToggle(
 	"silentdistancecheck",
 	{ Text = "Distance Check", Default = false }
 )
-bh:AddSlider(
+bA:AddSlider(
 	"silentmaxdistance",
 	{ Text = "Max Distance", Default = 500, Min = 10, Max = 2000, Rounding = 0, Suffix = " studs" }
 )
-bh:AddToggle("fovenabled", { Text = "FOV Circle", Default = false })
-bh:AddSlider("fovsize", { Text = "FOV Circle Size", Default = 100, Min = 5, Max = 500, Rounding = 0 })
-bh:AddToggle("silentteamcheck", { Text = "Exclude Teammates", Default = true })
-bh:AddToggle("fovdraw", { Text = "Draw FOV Circle", Default = false })
-bh
+bA:AddToggle("fovenabled", { Text = "FOV Circle", Default = false })
+bA:AddSlider("fovsize", { Text = "FOV Circle Size", Default = 100, Min = 5, Max = 500, Rounding = 0 })
+bA:AddToggle("silentteamcheck", { Text = "Exclude Teammates", Default = true })
+bA:AddToggle("fovdraw", { Text = "Draw FOV Circle", Default = false })
+bA
 	:AddLabel("FOV color")
 	:AddColorPicker("fovcolor", { Default = Color3.fromRGB(255, 255, 255), Title = "FOV color" })
-bh:AddSlider("fovthickness", { Text = "FOV Thickness", Default = 1, Min = 1, Max = 10, Rounding = 0 })
-bh:AddToggle("snaplines", { Text = "Snapline", Default = false })
-bh
+bA:AddSlider("fovthickness", { Text = "FOV Thickness", Default = 1, Min = 1, Max = 10, Rounding = 0 })
+bA:AddToggle("snaplines", { Text = "Snapline", Default = false })
+bA
 	:AddLabel("Snapline color")
 	:AddColorPicker("snaptargetcolor", { Default = Color3.fromRGB(255, 0, 0), Title = "Snapline color" })
 
-if la_is_premium then
+do
 
-    local bi = m.Combat:AddRightGroupbox("Ragebot")
-    bi
+    local bB = k.Combat:AddRightGroupbox("Ragebot")
+    bB
     	:AddToggle("ragebot", { Text = "Enabled", Default = false })
     	:AddKeyPicker("ragebotbind", { Default = "None", SyncToggleState = true, Mode = "Toggle", Text = "Ragebot" })
-    bi:AddToggle(
+    bB:AddToggle(
     	"ragebotwallbang",
     	{ Text = "Wallbang", Default = false }
     )
-    bi:AddToggle(
+    bB:AddToggle("ragebotrangecheck", { Text = "Max Range", Default = false })
+    bB:AddSlider("ragebotmaxrange", { Text = "Range", Default = 500, Min = 25, Max = 3000, Rounding = 0, Suffix = " studs" })
+    bB:AddToggle(
     	"ragebotautoreload",
     	{ Text = "Auto Reload", Default = false }
     )
-    bi:AddToggle(
+    bB:AddToggle(
     	"ragebottpaura",
     	{ Text = "TP Aura", Default = false }
     )
-    bi:AddToggle("manipulation", { Text = "Manipulation", Default = false })
-    bi:AddSlider("manipulationdistance", {
+    bB:AddToggle("manipulation", { Text = "Manipulation", Default = false })
+    bB:AddSlider("manipulationdistance", {
     	Text = "Manipulation Distance",
     	Default = 1,
     	Min = 0,
@@ -2994,7 +3201,7 @@ if la_is_premium then
     	Rounding = 2,
     	Suffix = " studs",
     })
-    bi:AddDropdown("manipulationdepth", {
+    bB:AddDropdown("manipulationdepth", {
     	Text = "Scan Depth",
     	Values = { "Low", "Medium", "High" },
     	Default = 1,
@@ -3002,119 +3209,894 @@ if la_is_premium then
     })
 end
 
-local bi = Instance.new("ScreenGui")
-bi.Name = "cwfov"
-bi.IgnoreGuiInset = true
-bi.ResetOnSpawn = false
-bi.DisplayOrder = 100
-bi.Parent = (gethui and gethui()) or game:GetService("CoreGui")
+local bB = Instance.new("ScreenGui")
+bB.Name = "cwfov"
+bB.IgnoreGuiInset = true
+bB.ResetOnSpawn = false
+bB.DisplayOrder = 100
+bB.Parent = (gethui and gethui()) or game:GetService("CoreGui")
 
-local bj = Instance.new("Frame")
-bj.AnchorPoint = Vector2.new(0.5, 0.5)
-bj.BackgroundTransparency = 1
-bj.BorderSizePixel = 0
-bj.Visible = false
-bj.Parent = bi
+local bC = Instance.new("Frame")
+bC.AnchorPoint = Vector2.new(0.5, 0.5)
+bC.BackgroundTransparency = 1
+bC.BorderSizePixel = 0
+bC.Visible = false
+bC.Parent = bB
 
-local bk = Instance.new("UICorner")
-bk.CornerRadius = UDim.new(1, 0)
-bk.Parent = bj
+local bD = Instance.new("UICorner")
+bD.CornerRadius = UDim.new(1, 0)
+bD.Parent = bC
 
-local bl = Instance.new("UIStroke")
-bl.Thickness = 1
-bl.Color = Color3.fromRGB(255, 255, 255)
-bl.Parent = bj
+local bE = Instance.new("UIStroke")
+bE.Thickness = 1
+bE.Color = Color3.fromRGB(255, 255, 255)
+bE.Parent = bC
 
-local function bm()
+
+local bF = { x = -1, y = -1, r = -1, thick = -1, color = nil, shown = false }
+local function bG()
 	LPH_ATTRIBUTES(VM(NONE))
-	if not c.fovdraw then
-		bj.Visible = false
+	if not ad.fovdraw then
+		if bF.shown then
+			bF.shown = false
+			bC.Visible = false
+		end
 		return
 	end
-
-	local bn = i:GetMouseLocation()
-	local bo = e("fovsize", 100)
-	bj.Size = UDim2.fromOffset(bo * 2, bo * 2)
-	bj.Position = UDim2.fromOffset(bn.X, bn.Y)
-	bl.Thickness = e("fovthickness", 1)
-	bl.Color = e("fovcolor", Color3.new(1, 1, 1))
-	bj.Visible = true
+	local bH = N(g)
+	local bI, bJ = bH.X, bH.Y
+	local bK = c("fovsize", 100)
+	local bL = bF
+	if bK ~= bL.r then
+		bL.r = bK
+		bC.Size = UDim2.fromOffset(bK + bK, bK + bK)
+	end
+	if bI ~= bL.x or bJ ~= bL.y then
+		bL.x, bL.y = bI, bJ
+		bC.Position = UDim2.fromOffset(bI, bJ)
+	end
+	local bM = c("fovthickness", 1)
+	if bM ~= bL.thick then
+		bL.thick = bM
+		bE.Thickness = bM
+	end
+	local bN = c("fovcolor", Color3.new(1, 1, 1))
+	if bN ~= bL.color then
+		bL.color = bN
+		bE.Color = bN
+	end
+	if not bL.shown then
+		bL.shown = true
+		bC.Visible = true
+	end
 end
 
-local bn = Instance.new("ScreenGui")
-bn.Name = "cwsnap"
-bn.IgnoreGuiInset = true
-bn.ResetOnSpawn = false
-bn.DisplayOrder = 100
-bn.Parent = (gethui and gethui()) or game:GetService("CoreGui")
+local bH = Instance.new("ScreenGui")
+bH.Name = "cwsnap"
+bH.IgnoreGuiInset = true
+bH.ResetOnSpawn = false
+bH.DisplayOrder = 100
+bH.Parent = (gethui and gethui()) or game:GetService("CoreGui")
 
-local bo = Instance.new("Frame")
-bo.AnchorPoint = Vector2.new(0.5, 0.5)
-bo.BorderSizePixel = 0
-bo.Visible = false
-bo.Parent = bn
+local bI = Instance.new("Frame")
+bI.AnchorPoint = Vector2.new(0.5, 0.5)
+bI.BorderSizePixel = 0
+bI.Visible = false
+bI.Parent = bH
 
-local function bp()
+local bJ = 180 / math.pi
+local bK = false
+local function bL()
 	LPH_ATTRIBUTES(VM(NONE))
-	local bq = f.target
-	if c.snaplines and bq and bq.Parent then
-		local br = workspace.CurrentCamera
-		if br then
-			local bs, bt = br:WorldToViewportPoint(bq.Position)
-			if bt and bs.Z > 0 then
-				local bu = i:GetMouseLocation()
-				local bv = Vector2.new(bs.X, bs.Y)
-				local bw = bv - bu
-				bo.Size = UDim2.fromOffset(bw.Magnitude, 1)
-				bo.Position = UDim2.fromOffset((bu.X + bv.X) / 2, (bu.Y + bv.Y) / 2)
-				bo.Rotation = math.deg(math.atan2(bw.Y, bw.X))
-				bo.BackgroundColor3 = e("snaptargetcolor", Color3.fromRGB(255, 0, 0))
-				bo.Visible = true
-				return
+	local bM = d.target
+	local bN = workspace.CurrentCamera
+	if ad.snaplines and bM and bM.Parent and bN then
+		local bO, bP = M(bN, bM.Position)
+		if bP then
+			local bQ = N(g)
+			local bR, bS = bQ.X, bQ.Y
+			local bT, bU = bO.X - bR, bO.Y - bS
+			bI.Size = UDim2.fromOffset(math.sqrt(bT * bT + bU * bU), 1)
+			bI.Position = UDim2.fromOffset(bR + bT * 0.5, bS + bU * 0.5)
+			bI.Rotation = math.atan2(bU, bT) * bJ
+			bI.BackgroundColor3 = c("snaptargetcolor", Color3.fromRGB(255, 0, 0))
+			if not bK then
+				bK = true
+				bI.Visible = true
+			end
+			return
+		end
+	end
+	if bK then
+		bK = false
+		bI.Visible = false
+	end
+end
+
+	ac.functions = ah
+	ac.espCfg = bt
+	ac.applyESP = bw
+	ac.refreshTeamFilter = bx
+	ac.cars = {
+		entries = X,
+		defaults = T,
+		boolDefaults = U,
+		choiceDefaults = V,
+		state = aY,
+		apply = aZ,
+		profile = a_,
+		setControl = a0,
+		syncJson = aU,
+		loadJson = aV,
+	}
+
+	ac.combat = {
+		targetStep = af,
+		aimbotRenderStep = ag,
+		fovRenderStep = bG,
+		snapRenderStep = bL,
+		rageSchedulerStep = bs,
+		autoHealStep = aN,
+		fastReviveStep = S,
+		carModsStep = a2,
+		applyESP = bw,
+		refreshTeamFilter = bx,
+		debug = { shift = function(...) return am(...) end, canDamage = bd, penetrable = bc },
+		unload = function()
+			
+			s.Shake = ar
+			q.new = aJ
+			if bB then
+				bB:Destroy()
+				bB = nil
+			end
+			if bH then
+				bH:Destroy()
+				bH = nil
+			end
+		end,
+	}
+end
+
+function ab.step()
+end
+
+function ab.unload()
+end
+
+return ab
+end function a.e()local ab=a.cache.e if not ab then ab={c=aa()}a.cache.e=ab end return ab.c end end do local function aa()
+local ab = {}
+
+function ab.build(ac)
+	local ad = ac.flags
+	local ae = ac.tv
+	local af = ac.ov
+	local ag = ac.util
+	local ah = ac.Players
+	local ai = ac.RunService
+	local aj = ac.UserInputService
+	local ak = ac.LocalPlayer
+	local al = ac.RS
+	local am = ac.Library
+	local an = ac.Tabs
+	local ao = ac.HttpService
+	local ap = ac.manipulation
+	local aq = ac.RecoilController
+	local ar = ac.AimController
+	local as = ac.FiremodeController
+	local at = ac.Trajectory
+	local au = ac.InventoryController
+	local av = ac.CameraShaker
+local aw = an.ESP:AddLeftGroupbox("Main")
+aw:AddToggle("ESPMaster", { Text = "Enabled", Default = false })
+aw:AddToggle(
+	"ESPFilterTeam",
+	{ Text = "Filter teammates", Default = false }
+)
+aw:AddSlider(
+	"ESPMaxDistance",
+	{
+		Text = "Max distance",
+		Default = 0,
+		Min = 0,
+		Max = 2000,
+		Rounding = 0,
+		Suffix = " studs",
+	}
+)
+
+local ax = an.ESP:AddLeftGroupbox("Boxes")
+ax:AddToggle("ESPBoxes", { Text = "Boxes", Default = true })
+ax:AddDropdown("ESPBoxType", { Text = "Box type", Values = { "Normal", "Corner" }, Default = 1, Multi = false })
+ax
+	:AddLabel("Box color")
+	:AddColorPicker("ESPBoxColor", { Default = Color3.fromRGB(255, 255, 255), Title = "Box color" })
+ax:AddSlider("ESPBoxThickness", { Text = "Box thickness", Default = 1, Min = 1, Max = 6, Rounding = 0 })
+ax:AddToggle("ESPBoxOutline", { Text = "Box outline", Default = true })
+ax
+	:AddLabel("Outline color")
+	:AddColorPicker("ESPBoxOutlineColor", { Default = Color3.fromRGB(0, 0, 0), Title = "Outline color" })
+ax:AddDivider()
+ax:AddToggle("ESPBoxFill", { Text = "Box fill", Default = false })
+ax
+	:AddLabel("Fill color")
+	:AddColorPicker("ESPBoxFillColor", { Default = Color3.fromRGB(255, 255, 255), Title = "Fill color" })
+ax:AddSlider(
+	"ESPBoxFillTransparency",
+	{ Text = "Fill transparency", Default = 0.9, Min = 0, Max = 1, Rounding = 2 }
+)
+
+local ay = an.ESP:AddRightGroupbox("Chams")
+ay:AddToggle("ESPChams", { Text = "Chams", Default = false })
+ay:AddDropdown(
+	"ESPChamsType",
+	{
+		Text = "Chams type",
+		Values = { "Highlight", "Adornment", "MeshChams" },
+		Default = 1,
+		Multi = false,
+	}
+)
+ay
+	:AddLabel("Fill color")
+	:AddColorPicker("ESPChamsFill", { Default = Color3.fromRGB(59, 144, 204), Title = "Cham fill" })
+ay:AddSlider("ESPChamsFillT", { Text = "Fill transparency", Default = 0.6, Min = 0, Max = 1, Rounding = 2 })
+ay
+	:AddLabel("Outline color")
+	:AddColorPicker("ESPChamsOutline", { Default = Color3.fromRGB(255, 255, 255), Title = "Cham outline" })
+ay:AddSlider("ESPChamsOutlineT", { Text = "Outline transparency", Default = 0, Min = 0, Max = 1, Rounding = 2 })
+ay:AddToggle(
+	"ESPChamsVisible",
+	{ Text = "Visible check", Default = false }
+)
+
+local az = an.ESP:AddLeftGroupbox("Names & Info")
+az:AddToggle("ESPNames", { Text = "Names", Default = true })
+az
+	:AddLabel("Name color")
+	:AddColorPicker("ESPNameColor", { Default = Color3.fromRGB(255, 255, 255), Title = "Name color" })
+az:AddSlider("ESPTextSize", { Text = "Text size", Default = 12, Min = 6, Max = 28, Rounding = 0 })
+az:AddToggle("ESPTextOutline", { Text = "Text outline", Default = true })
+az:AddDivider()
+az:AddToggle("ESPDistance", { Text = "Distance", Default = false })
+az
+	:AddLabel("Distance color")
+	:AddColorPicker("ESPDistanceColor", { Default = Color3.fromRGB(255, 255, 255), Title = "Distance color" })
+az:AddToggle("ESPWeapon", { Text = "Weapon", Default = false })
+az:AddToggle("ESPTeam", { Text = "Team indicator", Default = false })
+az:AddToggle(
+	"ESPFriendly",
+	{ Text = "Friendly indicator", Default = false }
+)
+
+local aA = an.ESP:AddRightGroupbox("Health")
+aA:AddToggle("ESPHealth", { Text = "Health", Default = false })
+aA:AddDropdown(
+	"ESPHealthMode",
+	{
+		Text = "Health mode",
+		Values = { "Average", "Target part" },
+		Default = 1,
+		Multi = false,
+	}
+)
+
+local aB = an.ESP:AddRightGroupbox("Flags & Arrows")
+aB:AddToggle("ESPFlags", { Text = "Status flags", Default = false })
+aB:AddToggle("ESPFlagIdle", { Text = "Flag: Idle", Default = false })
+aB:AddToggle("ESPFlagMoving", { Text = "Flag: Moving", Default = false })
+aB:AddToggle("ESPFlagJumping", { Text = "Flag: Jumping", Default = false })
+aB:AddToggle("ESPFlagSwimming", { Text = "Flag: Swimming", Default = false })
+aB:AddDivider()
+aB:AddToggle("ESPArrows", { Text = "Off-screen arrows", Default = false })
+aB
+	:AddLabel("Arrow color")
+	:AddColorPicker("ESPArrowColor", { Default = Color3.fromRGB(255, 255, 255), Title = "Arrow color" })
+aB:AddSlider("ESPArrowSize", { Text = "Arrow size", Default = 14, Min = 8, Max = 40, Rounding = 0 })
+
+local aC = {
+	"ESPMaster",
+	"ESPBoxes",
+	"ESPBoxOutline",
+	"ESPBoxFill",
+	"ESPNames",
+	"ESPTextOutline",
+	"ESPDistance",
+	"ESPWeapon",
+	"ESPTeam",
+	"ESPFriendly",
+	"ESPHealth",
+	"ESPChams",
+	"ESPChamsVisible",
+	"ESPFlags",
+	"ESPFlagIdle",
+	"ESPFlagMoving",
+	"ESPFlagJumping",
+	"ESPFlagSwimming",
+	"ESPArrows",
+}
+local aD = {
+	"ESPMaxDistance",
+	"ESPBoxType",
+	"ESPBoxColor",
+	"ESPBoxThickness",
+	"ESPBoxOutlineColor",
+	"ESPBoxFillColor",
+	"ESPBoxFillTransparency",
+	"ESPNameColor",
+	"ESPTextSize",
+	"ESPDistanceColor",
+	"ESPHealthMode",
+	"ESPChamsType",
+	"ESPChamsFill",
+	"ESPChamsFillT",
+	"ESPChamsOutline",
+	"ESPChamsOutlineT",
+	"ESPArrowColor",
+	"ESPArrowSize",
+}
+
+for aE, aF in ipairs(aC) do
+	Toggles[aF]:OnChanged(ac.applyESP)
+end
+for aE, aF in ipairs(aD) do
+	Options[aF]:OnChanged(ac.applyESP)
+end
+
+Toggles.ESPFilterTeam:OnChanged(ac.refreshTeamFilter)
+
+ac.applyESP()
+ac.refreshTeamFilter()
+
+local aE = 0
+local function aF(aG)
+	LPH_ATTRIBUTES(VM(NONE))
+	if not ac.ESP or not ac.espCfg or not ad.ESPMaster then
+		return
+	end
+	aE = aE + aG
+	if aE < 1 then
+		return
+	end
+	aE = 0
+	ac.refreshTeamFilter()
+end
+
+local aG = game:GetService("Lighting")
+local aH = {
+	"GlobalShadows",
+	"Brightness",
+	"ClockTime",
+	"ExposureCompensation",
+	"ShadowSoftness",
+	"EnvironmentDiffuseScale",
+	"EnvironmentSpecularScale",
+	"GeographicLatitude",
+	"Ambient",
+	"OutdoorAmbient",
+	"ColorShift_Top",
+	"ColorShift_Bottom",
+	"FogColor",
+	"FogStart",
+	"FogEnd",
+}
+local aI = {
+	Atmosphere = { "Color", "Decay", "Density", "Offset", "Haze", "Glare" },
+	BloomEffect = { "Enabled", "Intensity", "Size", "Threshold" },
+	ColorCorrectionEffect = { "Enabled", "Brightness", "Contrast", "Saturation", "TintColor" },
+	SunRaysEffect = { "Enabled", "Intensity", "Spread" },
+	DepthOfFieldEffect = { "Enabled", "FarIntensity", "NearIntensity", "FocusDistance", "InFocusRadius" },
+	BlurEffect = { "Enabled", "Size" },
+}
+local aJ = { Lighting = {}, Effects = {} }
+local aK = {}
+for aL, aM in ipairs(aH) do
+	aJ.Lighting[aM] = aG[aM]
+end
+for aL, aM in ipairs(aG:GetDescendants()) do
+	local aN = aI[aM.ClassName]
+	if aN then
+		aK[#aK + 1] = aM
+		local aO = {}
+		for aP, aQ in ipairs(aN) do
+			aO[aQ] = aM[aQ]
+		end
+		aJ.Effects[aM] = aO
+	end
+end
+
+local aL = aG:FindFirstChildOfClass("Atmosphere")
+local aM = aG:FindFirstChildOfClass("BloomEffect")
+local aN = aG:FindFirstChildOfClass("ColorCorrectionEffect")
+local aO = aG:FindFirstChildOfClass("SunRaysEffect")
+local aP = aG:FindFirstChild("DepthOfField")
+local aQ = aG:FindFirstChildOfClass("BlurEffect")
+
+local function aR()
+	for aS, aT in pairs(aJ.Lighting) do
+		aG[aS] = aT
+	end
+	for aS, aT in pairs(aJ.Effects) do
+		if aS.Parent then
+			for aU, aV in pairs(aT) do
+				aS[aU] = aV
 			end
 		end
 	end
-	bo.Visible = false
 end
 
+local function aS(aT, aU, aV)
+	if aT[aU] ~= aV then
+		aT[aU] = aV
+	end
+end
 
-	b.functions = af
-	b.espCfg = ba
-	b.applyESP = bd
-	b.refreshTeamFilter = be
-	b.cars = {
-		entries = aE,
-		defaults = aA,
-		boolDefaults = aB,
-		choiceDefaults = aC,
-		state = S,
-		apply = T,
-		profile = aP,
-		setControl = U,
-		syncJson = aN,
-		loadJson = aO,
+local function aT()
+	LPH_ATTRIBUTES(VM(NONE))
+	if not ae("lightingoverride", false) then
+		return
+	end
+	local aU = af("fogstart", aJ.Lighting.FogStart)
+	aS(aG, "GlobalShadows", ae("globalshadows", aJ.Lighting.GlobalShadows))
+	aS(aG, "Brightness", af("lightingbrightness", aJ.Lighting.Brightness))
+	aS(aG, "ClockTime", af("clocktime", aJ.Lighting.ClockTime))
+	aS(
+		aG,
+		"ExposureCompensation",
+		af("exposure", aJ.Lighting.ExposureCompensation)
+	)
+	aS(aG, "ShadowSoftness", af("shadowsoftness", aJ.Lighting.ShadowSoftness))
+	aS(
+		aG,
+		"EnvironmentDiffuseScale",
+		af("diffusescale", aJ.Lighting.EnvironmentDiffuseScale)
+	)
+	aS(
+		aG,
+		"EnvironmentSpecularScale",
+		af("specularscale", aJ.Lighting.EnvironmentSpecularScale)
+	)
+	aS(aG, "GeographicLatitude", af("latitude", aJ.Lighting.GeographicLatitude))
+	aS(aG, "Ambient", af("ambientcolor", aJ.Lighting.Ambient))
+	aS(aG, "OutdoorAmbient", af("outdoorambient", aJ.Lighting.OutdoorAmbient))
+	aS(aG, "ColorShift_Top", af("colorshifttop", aJ.Lighting.ColorShift_Top))
+	aS(
+		aG,
+		"ColorShift_Bottom",
+		af("colorshiftbottom", aJ.Lighting.ColorShift_Bottom)
+	)
+	aS(aG, "FogColor", af("fogcolor", aJ.Lighting.FogColor))
+	aS(aG, "FogStart", aU)
+	aS(aG, "FogEnd", math.max(aU, af("fogend", aJ.Lighting.FogEnd)))
+
+	for aV, aW in ipairs(aK) do
+		if not aW.Parent then
+			continue
+		end
+		if aW:IsA("Atmosphere") then
+			local aX = aJ.Effects[aW]
+			local aY = ae("atmosphereenabled", true)
+			aS(aW, "Color", af("atmospherecolor", aX.Color))
+			aS(aW, "Decay", af("atmospheredecay", aX.Decay))
+			aS(aW, "Density", aY and af("atmospheredensity", aX.Density) or 0)
+			aS(aW, "Offset", af("atmosphereoffset", aX.Offset))
+			aS(aW, "Haze", aY and af("atmospherehaze", aX.Haze) or 0)
+			aS(aW, "Glare", aY and af("atmosphereglare", aX.Glare) or 0)
+		elseif aW:IsA("BloomEffect") then
+			local aX = aJ.Effects[aW]
+			aS(aW, "Enabled", ae("bloomenabled", aX.Enabled))
+			aS(aW, "Intensity", af("bloomintensity", aX.Intensity))
+			aS(aW, "Size", af("bloomsize", aX.Size))
+			aS(aW, "Threshold", af("bloomthreshold", aX.Threshold))
+		elseif aW:IsA("ColorCorrectionEffect") then
+			local aX = aJ.Effects[aW]
+			aS(aW, "Enabled", ae("colorcorrectionenabled", aX.Enabled))
+			aS(aW, "Brightness", af("ccbrightness", aX.Brightness))
+			aS(aW, "Contrast", af("cccontrast", aX.Contrast))
+			aS(aW, "Saturation", af("ccsaturation", aX.Saturation))
+			aS(aW, "TintColor", af("cctint", aX.TintColor))
+		elseif aW:IsA("SunRaysEffect") then
+			local aX = aJ.Effects[aW]
+			aS(aW, "Enabled", ae("sunraysenabled", aX.Enabled))
+			aS(aW, "Intensity", af("sunraysintensity", aX.Intensity))
+			aS(aW, "Spread", af("sunraysspread", aX.Spread))
+		elseif aW:IsA("DepthOfFieldEffect") and aW.Name == "DepthOfField" then
+			local aX = aJ.Effects[aW]
+			aS(aW, "Enabled", ae("dofenabled", aX.Enabled))
+			aS(aW, "FarIntensity", af("doffar", aX.FarIntensity))
+			aS(aW, "NearIntensity", af("dofnear", aX.NearIntensity))
+			aS(aW, "FocusDistance", af("doffocus", aX.FocusDistance))
+			aS(aW, "InFocusRadius", af("dofradius", aX.InFocusRadius))
+		elseif aW:IsA("BlurEffect") then
+			local aX = aJ.Effects[aW]
+			aS(aW, "Enabled", ae("blurenabled", aX.Enabled))
+			aS(aW, "Size", af("blursize", aX.Size))
+		end
+	end
+end
+
+local aU = an.Visuals:AddRightGroupbox("Lighting")
+aU:AddToggle(
+	"lightingoverride",
+	{
+		Text = "Lighting Override",
+		Default = false,
 	}
+)
+Toggles.lightingoverride:OnChanged(function(aV)
+	if aV then
+		aT()
+	else
+		aR()
+	end
+end)
+aU:AddToggle("globalshadows", { Text = "Global Shadows", Default = aG.GlobalShadows })
+aU:AddSlider(
+	"lightingbrightness",
+	{ Text = "Brightness", Default = aG.Brightness, Min = 0, Max = 10, Rounding = 2 }
+)
+aU:AddSlider(
+	"clocktime",
+	{ Text = "Clock Time", Default = aG.ClockTime, Min = 0, Max = 24, Rounding = 2, Suffix = " h" }
+)
+aU:AddSlider(
+	"exposure",
+	{ Text = "Exposure", Default = aG.ExposureCompensation, Min = -5, Max = 5, Rounding = 2 }
+)
+aU:AddSlider(
+	"shadowsoftness",
+	{ Text = "Shadow Softness", Default = aG.ShadowSoftness, Min = 0, Max = 1, Rounding = 2 }
+)
+aU:AddSlider(
+	"diffusescale",
+	{ Text = "Environment Diffuse", Default = aG.EnvironmentDiffuseScale, Min = 0, Max = 1, Rounding = 2 }
+)
+aU:AddSlider(
+	"specularscale",
+	{ Text = "Environment Specular", Default = aG.EnvironmentSpecularScale, Min = 0, Max = 1, Rounding = 2 }
+)
+aU:AddSlider(
+	"latitude",
+	{ Text = "Sun Latitude", Default = aG.GeographicLatitude, Min = -180, Max = 180, Rounding = 1, Suffix = "°" }
+)
+aU:AddLabel("Ambient"):AddColorPicker("ambientcolor", { Default = aG.Ambient, Title = "Ambient" })
+aU
+	:AddLabel("Outdoor Ambient")
+	:AddColorPicker("outdoorambient", { Default = aG.OutdoorAmbient, Title = "Outdoor Ambient" })
+aU
+	:AddLabel("Color Shift Top")
+	:AddColorPicker("colorshifttop", { Default = aG.ColorShift_Top, Title = "Color Shift Top" })
+aU
+	:AddLabel("Color Shift Bottom")
+	:AddColorPicker("colorshiftbottom", { Default = aG.ColorShift_Bottom, Title = "Color Shift Bottom" })
 
-	b.combat = {
-		targetStep = ad,
-		aimbotRenderStep = ae,
-		fovRenderStep = bm,
-		snapRenderStep = bp,
-		rageSchedulerStep = a9,
-		autoHealStep = ax,
-		fastReviveStep = az,
-		carModsStep = W,
-		applyESP = bd,
-		refreshTeamFilter = be,
+local aV = an.Visuals:AddRightGroupbox("Fog & Atmosphere")
+aV:AddLabel("Fog Color"):AddColorPicker("fogcolor", { Default = aG.FogColor, Title = "Fog Color" })
+aV:AddSlider(
+	"fogstart",
+	{ Text = "Fog Start", Default = aG.FogStart, Min = 0, Max = 10000, Rounding = 0, Suffix = " studs" }
+)
+aV:AddSlider(
+	"fogend",
+	{
+		Text = "Fog End",
+		Default = math.min(aG.FogEnd, 100000),
+		Min = 0,
+		Max = 100000,
+		Rounding = 0,
+		Suffix = " studs",
+	}
+)
+aV:AddToggle("atmosphereenabled", { Text = "Atmosphere", Default = true })
+aV:AddLabel("Atmosphere Color"):AddColorPicker(
+	"atmospherecolor",
+	{ Default = aL and aL.Color or Color3.new(1, 1, 1), Title = "Atmosphere Color" }
+)
+aV:AddLabel("Atmosphere Decay"):AddColorPicker(
+	"atmospheredecay",
+	{ Default = aL and aL.Decay or Color3.new(1, 1, 1), Title = "Atmosphere Decay" }
+)
+aV:AddSlider(
+	"atmospheredensity",
+	{ Text = "Density", Default = aL and aL.Density or 0, Min = 0, Max = 1, Rounding = 3 }
+)
+aV:AddSlider(
+	"atmosphereoffset",
+	{ Text = "Offset", Default = aL and aL.Offset or 0, Min = -1, Max = 1, Rounding = 3 }
+)
+aV:AddSlider(
+	"atmospherehaze",
+	{ Text = "Haze", Default = aL and aL.Haze or 0, Min = 0, Max = 10, Rounding = 2 }
+)
+aV:AddSlider(
+	"atmosphereglare",
+	{ Text = "Glare", Default = aL and aL.Glare or 0, Min = 0, Max = 10, Rounding = 2 }
+)
+
+local aW = an.Visuals:AddRightGroupbox("Post Processing")
+aW:AddToggle("bloomenabled", { Text = "Bloom", Default = aM and aM.Enabled or false })
+aW:AddSlider(
+	"bloomintensity",
+	{ Text = "Bloom Intensity", Default = aM and aM.Intensity or 0, Min = 0, Max = 10, Rounding = 2 }
+)
+aW:AddSlider(
+	"bloomsize",
+	{ Text = "Bloom Size", Default = aM and aM.Size or 24, Min = 0, Max = 56, Rounding = 0 }
+)
+aW:AddSlider(
+	"bloomthreshold",
+	{ Text = "Bloom Threshold", Default = aM and aM.Threshold or 2, Min = 0, Max = 10, Rounding = 2 }
+)
+aW:AddToggle(
+	"colorcorrectionenabled",
+	{ Text = "Color Correction", Default = aN and aN.Enabled or false }
+)
+aW:AddSlider(
+	"ccbrightness",
+	{
+		Text = "CC Brightness",
+		Default = aN and aN.Brightness or 0,
+		Min = -1,
+		Max = 1,
+		Rounding = 2,
+	}
+)
+aW:AddSlider(
+	"cccontrast",
+	{
+		Text = "CC Contrast",
+		Default = aN and aN.Contrast or 0,
+		Min = -1,
+		Max = 1,
+		Rounding = 2,
+	}
+)
+aW:AddSlider(
+	"ccsaturation",
+	{
+		Text = "CC Saturation",
+		Default = aN and aN.Saturation or 0,
+		Min = -1,
+		Max = 1,
+		Rounding = 2,
+	}
+)
+aW:AddLabel("CC Tint"):AddColorPicker(
+	"cctint",
+	{
+		Default = aN and aN.TintColor or Color3.new(1, 1, 1),
+		Title = "Color Correction Tint",
+	}
+)
+aW:AddToggle(
+	"sunraysenabled",
+	{ Text = "Sun Rays", Default = aO and aO.Enabled or false }
+)
+aW:AddSlider(
+	"sunraysintensity",
+	{
+		Text = "Sun Rays Intensity",
+		Default = aO and aO.Intensity or 0,
+		Min = 0,
+		Max = 1,
+		Rounding = 3,
+	}
+)
+aW:AddSlider(
+	"sunraysspread",
+	{ Text = "Sun Rays Spread", Default = aO and aO.Spread or 0, Min = 0, Max = 1, Rounding = 3 }
+)
+aW:AddToggle(
+	"dofenabled",
+	{ Text = "Depth of Field", Default = aP and aP.Enabled or false }
+)
+aW:AddSlider(
+	"doffar",
+	{
+		Text = "DOF Far Intensity",
+		Default = aP and aP.FarIntensity or 0,
+		Min = 0,
+		Max = 1,
+		Rounding = 3,
+	}
+)
+aW:AddSlider(
+	"dofnear",
+	{
+		Text = "DOF Near Intensity",
+		Default = aP and aP.NearIntensity or 0,
+		Min = 0,
+		Max = 1,
+		Rounding = 3,
+	}
+)
+aW:AddSlider(
+	"doffocus",
+	{
+		Text = "DOF Focus Distance",
+		Default = aP and aP.FocusDistance or 10,
+		Min = 0,
+		Max = 500,
+		Rounding = 1,
+	}
+)
+aW:AddSlider(
+	"dofradius",
+	{
+		Text = "DOF Focus Radius",
+		Default = aP and aP.InFocusRadius or 30,
+		Min = 0,
+		Max = 500,
+		Rounding = 1,
+	}
+)
+aW:AddToggle("blurenabled", { Text = "Blur", Default = aQ and aQ.Enabled or false })
+aW:AddSlider(
+	"blursize",
+	{ Text = "Blur Size", Default = aQ and aQ.Size or 0, Min = 0, Max = 56, Rounding = 0 }
+)
+
+
+
+local aX = an.Visuals:AddLeftGroupbox("Camera")
+aX:AddToggle("customfov", { Text = "Custom FOV", Default = false })
+aX:AddSlider("customfovvalue", { Text = "FOV", Default = 90, Min = 40, Max = 120, Rounding = 0 })
+aX:AddToggle("zoom", { Text = "Zoom", Default = false }):AddKeyPicker("zoombind", {
+	Default = "None",
+	Mode = "Hold",
+	Text = "Zoom",
+	NoUI = false,
+})
+aX:AddDropdown("zoommode", { Text = "Zoom Mode", Values = { "Hold", "Toggle" }, Default = 1 })
+aX:AddSlider("zoomfov", { Text = "Zoom FOV", Default = 25, Min = 5, Max = 60, Rounding = 0 })
+
+aX:AddToggle("maxzoom", { Text = "Max Zoom Out", Default = false })
+aX:AddSlider("maxzoomdistance", { Text = "Zoom Distance", Default = 30, Min = 6, Max = 400, Rounding = 0, Suffix = " studs" })
+
+
+local function aY()
+	task.spawn(pcall, function()
+		require(al.Client.Character.CameraController)._applyZoomRange()
+	end)
+end
+local aZ = false
+Toggles.maxzoom:OnChanged(function(a_)
+	if aZ and not a_ then
+		aY()
+	end
+	aZ = a_
+end)
+Options.zoommode:OnChanged(function(a_)
+	local a0 = Options.zoombind
+	if a0 then
+		a0.Mode = a_
+		a0.Toggled = false
+		pcall(a0.Update, a0)
+	end
+end)
+
+local a_ = 70
+local a0 = nil
+local function a1()
+	LPH_ATTRIBUTES(VM(NONE))
+	if ae("maxzoom", false) then
+		local a2 = af("maxzoomdistance", 30)
+		
+		if ak.CameraMaxZoomDistance ~= a2 then
+			ak.CameraMaxZoomDistance = a2
+		end
+	end
+	local a2 = workspace.CurrentCamera
+	if not a2 then
+		return
+	end
+	local a3 = ae("customfov", false)
+	local a4 = Options.zoombind
+	local a5 = ae("zoom", false) and a4 and a4:GetState()
+	if not (a3 or a5) then
+		a0 = nil
+		return
+	end
+	local a6 = a2.FieldOfView
+	if a6 == a0 then
+		
+		return
+	end
+	local a7
+	if a5 then
+		a7 = af("zoomfov", 25)
+	else
+		
+		a7 = a6 * (af("customfovvalue", 90) / a_)
+	end
+	a7 = math.clamp(a7, 1, 120)
+	a2.FieldOfView = a7
+	a0 = a7
+end
+
+local a2 = an.Visuals:AddLeftGroupbox("Bullet Tracers")
+a2:AddToggle("tracersenabled", { Text = "Bullet Tracers Enabled", Default = false })
+
+a2:AddToggle("teamtracers", { Text = "Draw Team Tracers", Default = false })
+a2:AddLabel("Team Tracers Color")
+	:AddColorPicker("teamtracerscolor", { Default = Color3.fromRGB(59, 144, 204), Title = "Team Tracer Color" })
+a2:AddDropdown(
+	"teamtracersmaterial",
+	{
+		Text = "Team Tracer Material",
+		Values = { "Plastic", "SmoothPlastic", "ForceField", "Neon", "Glass" },
+		Default = 1,
+		Multi = false,
+	}
+)
+a2:AddSlider(
+	"teamtracerstransparency",
+	{
+		Text = "Team Tracer Transparency",
+		Default = 0.5,
+		Min = 0,
+		Max = 1,
+		Rounding = 2,
+	}
+)
+
+a2:AddToggle("enemytracers", { Text = "Draw Enemy Tracers", Default = false })
+a2:AddLabel("Enemy Tracers Color")
+	:AddColorPicker("enemytracerscolor", { Default = Color3.fromRGB(255, 60, 60), Title = "Enemy Tracer Color" })
+a2:AddDropdown(
+	"enemytracersmaterial",
+	{
+		Text = "Enemy Tracer Material",
+		Values = { "Plastic", "SmoothPlastic", "ForceField", "Neon", "Glass" },
+		Default = 1,
+		Multi = false,
+	}
+)
+a2:AddSlider(
+	"enemytracerstransparency",
+	{
+		Text = "Enemy Tracer Transparency",
+		Default = 0.5,
+		Min = 0,
+		Max = 1,
+		Rounding = 2,
+	}
+)
+a2:AddToggle("localtracers", { Text = "Draw Local Tracers", Default = false })
+a2:AddLabel("Local Tracers Color")
+	:AddColorPicker("localtracerscolor", { Default = Color3.fromRGB(59, 255, 50), Title = "Local Tracer Color" })
+a2:AddDropdown(
+	"localtracersmaterial",
+	{
+		Text = "Local Tracer Material",
+		Values = { "Plastic", "SmoothPlastic", "ForceField", "Neon", "Glass" },
+		Default = 1,
+		Multi = false,
+	}
+)
+a2:AddSlider(
+	"localtracerstransparency",
+	{
+		Text = "Local Tracer Transparency",
+		Default = 0.5,
+		Min = 0,
+		Max = 1,
+		Rounding = 2,
+	}
+)
+a2:AddSlider("bullettracersize", { Text = "Bullet Tracer Size", Default = 0.1, Min = 0.01, Max = 1, Rounding = 2 })
+
+
+	ac.visuals = {
+		cameraStep = a1,
+		teamFilterStep = aF,
+		applyLighting = aT,
 		unload = function()
-			if bi then
-				bi:Destroy()
-				bi = nil
+			if ae("maxzoom", false) then
+				aY()
 			end
-			if bn then
-				bn:Destroy()
-				bn = nil
-			end
+			aR()
 		end,
 	}
 end
@@ -3149,885 +4131,227 @@ function ab.build(ac)
 	local at = ac.Trajectory
 	local au = ac.InventoryController
 	local av = ac.CameraShaker
-	local aw = ac.paidToggleKeys
-	local ax = ac.paidOptionKeys
-local ay = an.ESP:AddLeftGroupbox("Main")
-ay:AddToggle("ESPMaster", { Text = "Enabled", Default = false })
-ay:AddToggle(
-	"ESPFilterTeam",
-	{ Text = "Filter teammates", Default = false }
-)
-ay:AddSlider(
-	"ESPMaxDistance",
-	{
-		Text = "Max distance",
-		Default = 0,
-		Min = 0,
-		Max = 2000,
-		Rounding = 0,
-		Suffix = " studs",
-	}
-)
+local aw = true
+local ax = 10
+local ay = 200
+local az = Drawing.new("Text")
+az.Text = "Moderators\nChecking players..."
+az.Position = Vector2.new(ax, ay)
+az.Size = 14
+az.Color = Color3.fromRGB(255, 255, 255)
+az.Outline = true
+az.OutlineColor = Color3.fromRGB(0, 0, 0)
+az.Visible = aw
+local aA = {}
+local aB = {}
+local aC
+local aD
 
-local az = an.ESP:AddLeftGroupbox("Boxes")
-az:AddToggle("ESPBoxes", { Text = "Boxes", Default = true })
-az:AddDropdown("ESPBoxType", { Text = "Box type", Values = { "Normal", "Corner" }, Default = 1, Multi = false })
-az
-	:AddLabel("Box color")
-	:AddColorPicker("ESPBoxColor", { Default = Color3.fromRGB(255, 255, 255), Title = "Box color" })
-az:AddSlider("ESPBoxThickness", { Text = "Box thickness", Default = 1, Min = 1, Max = 6, Rounding = 0 })
-az:AddToggle("ESPBoxOutline", { Text = "Box outline", Default = true })
-az
-	:AddLabel("Outline color")
-	:AddColorPicker("ESPBoxOutlineColor", { Default = Color3.fromRGB(0, 0, 0), Title = "Outline color" })
-az:AddDivider()
-az:AddToggle("ESPBoxFill", { Text = "Box fill", Default = false })
-az
-	:AddLabel("Fill color")
-	:AddColorPicker("ESPBoxFillColor", { Default = Color3.fromRGB(255, 255, 255), Title = "Fill color" })
-az:AddSlider(
-	"ESPBoxFillTransparency",
-	{ Text = "Fill transparency", Default = 0.9, Min = 0, Max = 1, Rounding = 2 }
-)
-
-local aA = an.ESP:AddRightGroupbox("Chams")
-aA:AddToggle("ESPChams", { Text = "Chams", Default = false })
-aA:AddDropdown(
-	"ESPChamsType",
-	{
-		Text = "Chams type",
-		Values = { "Highlight", "Adornment", "MeshChams" },
-		Default = 1,
-		Multi = false,
-	}
-)
-aA
-	:AddLabel("Fill color")
-	:AddColorPicker("ESPChamsFill", { Default = Color3.fromRGB(59, 144, 204), Title = "Cham fill" })
-aA:AddSlider("ESPChamsFillT", { Text = "Fill transparency", Default = 0.6, Min = 0, Max = 1, Rounding = 2 })
-aA
-	:AddLabel("Outline color")
-	:AddColorPicker("ESPChamsOutline", { Default = Color3.fromRGB(255, 255, 255), Title = "Cham outline" })
-aA:AddSlider("ESPChamsOutlineT", { Text = "Outline transparency", Default = 0, Min = 0, Max = 1, Rounding = 2 })
-aA:AddToggle(
-	"ESPChamsVisible",
-	{ Text = "Visible check", Default = false }
-)
-
-local aB = an.ESP:AddLeftGroupbox("Names & Info")
-aB:AddToggle("ESPNames", { Text = "Names", Default = true })
-aB
-	:AddLabel("Name color")
-	:AddColorPicker("ESPNameColor", { Default = Color3.fromRGB(255, 255, 255), Title = "Name color" })
-aB:AddSlider("ESPTextSize", { Text = "Text size", Default = 12, Min = 6, Max = 28, Rounding = 0 })
-aB:AddToggle("ESPTextOutline", { Text = "Text outline", Default = true })
-aB:AddDivider()
-aB:AddToggle("ESPDistance", { Text = "Distance", Default = false })
-aB
-	:AddLabel("Distance color")
-	:AddColorPicker("ESPDistanceColor", { Default = Color3.fromRGB(255, 255, 255), Title = "Distance color" })
-aB:AddToggle("ESPWeapon", { Text = "Weapon", Default = false })
-aB:AddToggle("ESPTeam", { Text = "Team indicator", Default = false })
-aB:AddToggle(
-	"ESPFriendly",
-	{ Text = "Friendly indicator", Default = false }
-)
-
-local aC = an.ESP:AddRightGroupbox("Health")
-aC:AddToggle("ESPHealth", { Text = "Health", Default = false })
-aC:AddDropdown(
-	"ESPHealthMode",
-	{
-		Text = "Health mode",
-		Values = { "Average", "Target part" },
-		Default = 1,
-		Multi = false,
-	}
-)
-
-local aD = an.ESP:AddRightGroupbox("Flags & Arrows")
-aD:AddToggle("ESPFlags", { Text = "Status flags", Default = false })
-aD:AddToggle("ESPFlagIdle", { Text = "Flag: Idle", Default = false })
-aD:AddToggle("ESPFlagMoving", { Text = "Flag: Moving", Default = false })
-aD:AddToggle("ESPFlagJumping", { Text = "Flag: Jumping", Default = false })
-aD:AddToggle("ESPFlagSwimming", { Text = "Flag: Swimming", Default = false })
-aD:AddDivider()
-aD:AddToggle("ESPArrows", { Text = "Off-screen arrows", Default = false })
-aD
-	:AddLabel("Arrow color")
-	:AddColorPicker("ESPArrowColor", { Default = Color3.fromRGB(255, 255, 255), Title = "Arrow color" })
-aD:AddSlider("ESPArrowSize", { Text = "Arrow size", Default = 14, Min = 8, Max = 40, Rounding = 0 })
-
-local aE = {
-	"ESPMaster",
-	"ESPBoxes",
-	"ESPBoxOutline",
-	"ESPBoxFill",
-	"ESPNames",
-	"ESPTextOutline",
-	"ESPDistance",
-	"ESPWeapon",
-	"ESPTeam",
-	"ESPFriendly",
-	"ESPHealth",
-	"ESPChams",
-	"ESPChamsVisible",
-	"ESPFlags",
-	"ESPFlagIdle",
-	"ESPFlagMoving",
-	"ESPFlagJumping",
-	"ESPFlagSwimming",
-	"ESPArrows",
-}
-local aF = {
-	"ESPMaxDistance",
-	"ESPBoxType",
-	"ESPBoxColor",
-	"ESPBoxThickness",
-	"ESPBoxOutlineColor",
-	"ESPBoxFillColor",
-	"ESPBoxFillTransparency",
-	"ESPNameColor",
-	"ESPTextSize",
-	"ESPDistanceColor",
-	"ESPHealthMode",
-	"ESPChamsType",
-	"ESPChamsFill",
-	"ESPChamsFillT",
-	"ESPChamsOutline",
-	"ESPChamsOutlineT",
-	"ESPArrowColor",
-	"ESPArrowSize",
-}
-
-for aG, aH in ipairs(aE) do
-	Toggles[aH]:OnChanged(ac.applyESP)
-end
-for aG, aH in ipairs(aF) do
-	Options[aH]:OnChanged(ac.applyESP)
-end
-
-Toggles.ESPFilterTeam:OnChanged(ac.refreshTeamFilter)
-
-ac.applyESP()
-ac.refreshTeamFilter()
-
-local aG = 0
-local function aH(aI)
+local function aE()
 	LPH_ATTRIBUTES(VM(NONE))
-	if not ac.ESP or not ac.espCfg or not ad.ESPMaster then
-		return
-	end
-	aG = aG + aI
-	if aG < 1 then
-		return
-	end
-	aG = 0
-	ac.refreshTeamFilter()
-end
-
-local aI = game:GetService("Lighting")
-local aJ = {
-	"GlobalShadows",
-	"Brightness",
-	"ClockTime",
-	"ExposureCompensation",
-	"ShadowSoftness",
-	"EnvironmentDiffuseScale",
-	"EnvironmentSpecularScale",
-	"GeographicLatitude",
-	"Ambient",
-	"OutdoorAmbient",
-	"ColorShift_Top",
-	"ColorShift_Bottom",
-	"FogColor",
-	"FogStart",
-	"FogEnd",
-}
-local aK = {
-	Atmosphere = { "Color", "Decay", "Density", "Offset", "Haze", "Glare" },
-	BloomEffect = { "Enabled", "Intensity", "Size", "Threshold" },
-	ColorCorrectionEffect = { "Enabled", "Brightness", "Contrast", "Saturation", "TintColor" },
-	SunRaysEffect = { "Enabled", "Intensity", "Spread" },
-	DepthOfFieldEffect = { "Enabled", "FarIntensity", "NearIntensity", "FocusDistance", "InFocusRadius" },
-	BlurEffect = { "Enabled", "Size" },
-}
-local aL = { Lighting = {}, Effects = {} }
-local aM = {}
-for aN, aO in ipairs(aJ) do
-	aL.Lighting[aO] = aI[aO]
-end
-for aN, aO in ipairs(aI:GetDescendants()) do
-	local aP = aK[aO.ClassName]
-	if aP then
-		aM[#aM + 1] = aO
-		local aQ = {}
-		for aR, aS in ipairs(aP) do
-			aQ[aS] = aO[aS]
-		end
-		aL.Effects[aO] = aQ
-	end
-end
-
-local aN = aI:FindFirstChildOfClass("Atmosphere")
-local aO = aI:FindFirstChildOfClass("BloomEffect")
-local aP = aI:FindFirstChildOfClass("ColorCorrectionEffect")
-local aQ = aI:FindFirstChildOfClass("SunRaysEffect")
-local aR = aI:FindFirstChild("DepthOfField")
-local aS = aI:FindFirstChildOfClass("BlurEffect")
-
-local function aT()
-	for aU, aV in pairs(aL.Lighting) do
-		aI[aU] = aV
-	end
-	for aU, aV in pairs(aL.Effects) do
-		if aU.Parent then
-			for aW, aX in pairs(aV) do
-				aU[aW] = aX
+	local aF = {}
+	for aG, aH in pairs(aA) do
+		if aG.Parent == ah and aH.IsModerator then
+			local aI = {}
+			if aH.Rank >= 240 then
+				aI[#aI + 1] = "Rank " .. aH.Rank
 			end
-		end
-	end
-end
-
-local function aU(aV, aW, aX)
-	if aV[aW] ~= aX then
-		aV[aW] = aX
-	end
-end
-
-local function aV()
-	LPH_ATTRIBUTES(VM(NONE))
-	if not ae("lightingoverride", false) then
-		return
-	end
-	local aW = af("fogstart", aL.Lighting.FogStart)
-	aU(aI, "GlobalShadows", ae("globalshadows", aL.Lighting.GlobalShadows))
-	aU(aI, "Brightness", af("lightingbrightness", aL.Lighting.Brightness))
-	aU(aI, "ClockTime", af("clocktime", aL.Lighting.ClockTime))
-	aU(
-		aI,
-		"ExposureCompensation",
-		af("exposure", aL.Lighting.ExposureCompensation)
-	)
-	aU(aI, "ShadowSoftness", af("shadowsoftness", aL.Lighting.ShadowSoftness))
-	aU(
-		aI,
-		"EnvironmentDiffuseScale",
-		af("diffusescale", aL.Lighting.EnvironmentDiffuseScale)
-	)
-	aU(
-		aI,
-		"EnvironmentSpecularScale",
-		af("specularscale", aL.Lighting.EnvironmentSpecularScale)
-	)
-	aU(aI, "GeographicLatitude", af("latitude", aL.Lighting.GeographicLatitude))
-	aU(aI, "Ambient", af("ambientcolor", aL.Lighting.Ambient))
-	aU(aI, "OutdoorAmbient", af("outdoorambient", aL.Lighting.OutdoorAmbient))
-	aU(aI, "ColorShift_Top", af("colorshifttop", aL.Lighting.ColorShift_Top))
-	aU(
-		aI,
-		"ColorShift_Bottom",
-		af("colorshiftbottom", aL.Lighting.ColorShift_Bottom)
-	)
-	aU(aI, "FogColor", af("fogcolor", aL.Lighting.FogColor))
-	aU(aI, "FogStart", aW)
-	aU(aI, "FogEnd", math.max(aW, af("fogend", aL.Lighting.FogEnd)))
-
-	for aX, aY in ipairs(aM) do
-		if not aY.Parent then
-			continue
-		end
-		if aY:IsA("Atmosphere") then
-			local aZ = aL.Effects[aY]
-			local a_ = ae("atmosphereenabled", true)
-			aU(aY, "Color", af("atmospherecolor", aZ.Color))
-			aU(aY, "Decay", af("atmospheredecay", aZ.Decay))
-			aU(aY, "Density", a_ and af("atmospheredensity", aZ.Density) or 0)
-			aU(aY, "Offset", af("atmosphereoffset", aZ.Offset))
-			aU(aY, "Haze", a_ and af("atmospherehaze", aZ.Haze) or 0)
-			aU(aY, "Glare", a_ and af("atmosphereglare", aZ.Glare) or 0)
-		elseif aY:IsA("BloomEffect") then
-			local aZ = aL.Effects[aY]
-			aU(aY, "Enabled", ae("bloomenabled", aZ.Enabled))
-			aU(aY, "Intensity", af("bloomintensity", aZ.Intensity))
-			aU(aY, "Size", af("bloomsize", aZ.Size))
-			aU(aY, "Threshold", af("bloomthreshold", aZ.Threshold))
-		elseif aY:IsA("ColorCorrectionEffect") then
-			local aZ = aL.Effects[aY]
-			aU(aY, "Enabled", ae("colorcorrectionenabled", aZ.Enabled))
-			aU(aY, "Brightness", af("ccbrightness", aZ.Brightness))
-			aU(aY, "Contrast", af("cccontrast", aZ.Contrast))
-			aU(aY, "Saturation", af("ccsaturation", aZ.Saturation))
-			aU(aY, "TintColor", af("cctint", aZ.TintColor))
-		elseif aY:IsA("SunRaysEffect") then
-			local aZ = aL.Effects[aY]
-			aU(aY, "Enabled", ae("sunraysenabled", aZ.Enabled))
-			aU(aY, "Intensity", af("sunraysintensity", aZ.Intensity))
-			aU(aY, "Spread", af("sunraysspread", aZ.Spread))
-		elseif aY:IsA("DepthOfFieldEffect") and aY.Name == "DepthOfField" then
-			local aZ = aL.Effects[aY]
-			aU(aY, "Enabled", ae("dofenabled", aZ.Enabled))
-			aU(aY, "FarIntensity", af("doffar", aZ.FarIntensity))
-			aU(aY, "NearIntensity", af("dofnear", aZ.NearIntensity))
-			aU(aY, "FocusDistance", af("doffocus", aZ.FocusDistance))
-			aU(aY, "InFocusRadius", af("dofradius", aZ.InFocusRadius))
-		elseif aY:IsA("BlurEffect") then
-			local aZ = aL.Effects[aY]
-			aU(aY, "Enabled", ae("blurenabled", aZ.Enabled))
-			aU(aY, "Size", af("blursize", aZ.Size))
-		end
-	end
-end
-
-local aW = an.Visuals:AddRightGroupbox("Lighting")
-aW:AddToggle(
-	"lightingoverride",
-	{
-		Text = "Lighting Override",
-		Default = false,
-	}
-)
-Toggles.lightingoverride:OnChanged(function(aX)
-	if aX then
-		aV()
-	else
-		aT()
-	end
-end)
-aW:AddToggle("globalshadows", { Text = "Global Shadows", Default = aI.GlobalShadows })
-aW:AddSlider(
-	"lightingbrightness",
-	{ Text = "Brightness", Default = aI.Brightness, Min = 0, Max = 10, Rounding = 2 }
-)
-aW:AddSlider(
-	"clocktime",
-	{ Text = "Clock Time", Default = aI.ClockTime, Min = 0, Max = 24, Rounding = 2, Suffix = " h" }
-)
-aW:AddSlider(
-	"exposure",
-	{ Text = "Exposure", Default = aI.ExposureCompensation, Min = -5, Max = 5, Rounding = 2 }
-)
-aW:AddSlider(
-	"shadowsoftness",
-	{ Text = "Shadow Softness", Default = aI.ShadowSoftness, Min = 0, Max = 1, Rounding = 2 }
-)
-aW:AddSlider(
-	"diffusescale",
-	{ Text = "Environment Diffuse", Default = aI.EnvironmentDiffuseScale, Min = 0, Max = 1, Rounding = 2 }
-)
-aW:AddSlider(
-	"specularscale",
-	{ Text = "Environment Specular", Default = aI.EnvironmentSpecularScale, Min = 0, Max = 1, Rounding = 2 }
-)
-aW:AddSlider(
-	"latitude",
-	{ Text = "Sun Latitude", Default = aI.GeographicLatitude, Min = -180, Max = 180, Rounding = 1, Suffix = "°" }
-)
-aW:AddLabel("Ambient"):AddColorPicker("ambientcolor", { Default = aI.Ambient, Title = "Ambient" })
-aW
-	:AddLabel("Outdoor Ambient")
-	:AddColorPicker("outdoorambient", { Default = aI.OutdoorAmbient, Title = "Outdoor Ambient" })
-aW
-	:AddLabel("Color Shift Top")
-	:AddColorPicker("colorshifttop", { Default = aI.ColorShift_Top, Title = "Color Shift Top" })
-aW
-	:AddLabel("Color Shift Bottom")
-	:AddColorPicker("colorshiftbottom", { Default = aI.ColorShift_Bottom, Title = "Color Shift Bottom" })
-
-local aX = an.Visuals:AddRightGroupbox("Fog & Atmosphere")
-aX:AddLabel("Fog Color"):AddColorPicker("fogcolor", { Default = aI.FogColor, Title = "Fog Color" })
-aX:AddSlider(
-	"fogstart",
-	{ Text = "Fog Start", Default = aI.FogStart, Min = 0, Max = 10000, Rounding = 0, Suffix = " studs" }
-)
-aX:AddSlider(
-	"fogend",
-	{
-		Text = "Fog End",
-		Default = math.min(aI.FogEnd, 100000),
-		Min = 0,
-		Max = 100000,
-		Rounding = 0,
-		Suffix = " studs",
-	}
-)
-aX:AddToggle("atmosphereenabled", { Text = "Atmosphere", Default = true })
-aX:AddLabel("Atmosphere Color"):AddColorPicker(
-	"atmospherecolor",
-	{ Default = aN and aN.Color or Color3.new(1, 1, 1), Title = "Atmosphere Color" }
-)
-aX:AddLabel("Atmosphere Decay"):AddColorPicker(
-	"atmospheredecay",
-	{ Default = aN and aN.Decay or Color3.new(1, 1, 1), Title = "Atmosphere Decay" }
-)
-aX:AddSlider(
-	"atmospheredensity",
-	{ Text = "Density", Default = aN and aN.Density or 0, Min = 0, Max = 1, Rounding = 3 }
-)
-aX:AddSlider(
-	"atmosphereoffset",
-	{ Text = "Offset", Default = aN and aN.Offset or 0, Min = -1, Max = 1, Rounding = 3 }
-)
-aX:AddSlider(
-	"atmospherehaze",
-	{ Text = "Haze", Default = aN and aN.Haze or 0, Min = 0, Max = 10, Rounding = 2 }
-)
-aX:AddSlider(
-	"atmosphereglare",
-	{ Text = "Glare", Default = aN and aN.Glare or 0, Min = 0, Max = 10, Rounding = 2 }
-)
-
-local aY = an.Visuals:AddRightGroupbox("Post Processing")
-aY:AddToggle("bloomenabled", { Text = "Bloom", Default = aO and aO.Enabled or false })
-aY:AddSlider(
-	"bloomintensity",
-	{ Text = "Bloom Intensity", Default = aO and aO.Intensity or 0, Min = 0, Max = 10, Rounding = 2 }
-)
-aY:AddSlider(
-	"bloomsize",
-	{ Text = "Bloom Size", Default = aO and aO.Size or 24, Min = 0, Max = 56, Rounding = 0 }
-)
-aY:AddSlider(
-	"bloomthreshold",
-	{ Text = "Bloom Threshold", Default = aO and aO.Threshold or 2, Min = 0, Max = 10, Rounding = 2 }
-)
-aY:AddToggle(
-	"colorcorrectionenabled",
-	{ Text = "Color Correction", Default = aP and aP.Enabled or false }
-)
-aY:AddSlider(
-	"ccbrightness",
-	{
-		Text = "CC Brightness",
-		Default = aP and aP.Brightness or 0,
-		Min = -1,
-		Max = 1,
-		Rounding = 2,
-	}
-)
-aY:AddSlider(
-	"cccontrast",
-	{
-		Text = "CC Contrast",
-		Default = aP and aP.Contrast or 0,
-		Min = -1,
-		Max = 1,
-		Rounding = 2,
-	}
-)
-aY:AddSlider(
-	"ccsaturation",
-	{
-		Text = "CC Saturation",
-		Default = aP and aP.Saturation or 0,
-		Min = -1,
-		Max = 1,
-		Rounding = 2,
-	}
-)
-aY:AddLabel("CC Tint"):AddColorPicker(
-	"cctint",
-	{
-		Default = aP and aP.TintColor or Color3.new(1, 1, 1),
-		Title = "Color Correction Tint",
-	}
-)
-aY:AddToggle(
-	"sunraysenabled",
-	{ Text = "Sun Rays", Default = aQ and aQ.Enabled or false }
-)
-aY:AddSlider(
-	"sunraysintensity",
-	{
-		Text = "Sun Rays Intensity",
-		Default = aQ and aQ.Intensity or 0,
-		Min = 0,
-		Max = 1,
-		Rounding = 3,
-	}
-)
-aY:AddSlider(
-	"sunraysspread",
-	{ Text = "Sun Rays Spread", Default = aQ and aQ.Spread or 0, Min = 0, Max = 1, Rounding = 3 }
-)
-aY:AddToggle(
-	"dofenabled",
-	{ Text = "Depth of Field", Default = aR and aR.Enabled or false }
-)
-aY:AddSlider(
-	"doffar",
-	{
-		Text = "DOF Far Intensity",
-		Default = aR and aR.FarIntensity or 0,
-		Min = 0,
-		Max = 1,
-		Rounding = 3,
-	}
-)
-aY:AddSlider(
-	"dofnear",
-	{
-		Text = "DOF Near Intensity",
-		Default = aR and aR.NearIntensity or 0,
-		Min = 0,
-		Max = 1,
-		Rounding = 3,
-	}
-)
-aY:AddSlider(
-	"doffocus",
-	{
-		Text = "DOF Focus Distance",
-		Default = aR and aR.FocusDistance or 10,
-		Min = 0,
-		Max = 500,
-		Rounding = 1,
-	}
-)
-aY:AddSlider(
-	"dofradius",
-	{
-		Text = "DOF Focus Radius",
-		Default = aR and aR.InFocusRadius or 30,
-		Min = 0,
-		Max = 500,
-		Rounding = 1,
-	}
-)
-aY:AddToggle("blurenabled", { Text = "Blur", Default = aS and aS.Enabled or false })
-aY:AddSlider(
-	"blursize",
-	{ Text = "Blur Size", Default = aS and aS.Size or 0, Min = 0, Max = 56, Rounding = 0 }
-)
-
-local aZ = an.Visuals:AddLeftGroupbox("Bullet Tracers")
-aZ:AddToggle("tracersenabled", { Text = "Bullet Tracers Enabled", Default = false })
-
-aZ:AddToggle("teamtracers", { Text = "Draw Team Tracers", Default = false })
-aZ:AddLabel("Team Tracers Color")
-	:AddColorPicker("teamtracerscolor", { Default = Color3.fromRGB(59, 144, 204), Title = "Team Tracer Color" })
-aZ:AddDropdown(
-	"teamtracersmaterial",
-	{
-		Text = "Team Tracer Material",
-		Values = { "Plastic", "SmoothPlastic", "ForceField", "Neon", "Glass" },
-		Default = 1,
-		Multi = false,
-	}
-)
-aZ:AddSlider(
-	"teamtracerstransparency",
-	{
-		Text = "Team Tracer Transparency",
-		Default = 0.5,
-		Min = 0,
-		Max = 1,
-		Rounding = 2,
-	}
-)
-
-aZ:AddToggle("enemytracers", { Text = "Draw Enemy Tracers", Default = false })
-aZ:AddLabel("Enemy Tracers Color")
-	:AddColorPicker("enemytracerscolor", { Default = Color3.fromRGB(255, 60, 60), Title = "Enemy Tracer Color" })
-aZ:AddDropdown(
-	"enemytracersmaterial",
-	{
-		Text = "Enemy Tracer Material",
-		Values = { "Plastic", "SmoothPlastic", "ForceField", "Neon", "Glass" },
-		Default = 1,
-		Multi = false,
-	}
-)
-aZ:AddSlider(
-	"enemytracerstransparency",
-	{
-		Text = "Enemy Tracer Transparency",
-		Default = 0.5,
-		Min = 0,
-		Max = 1,
-		Rounding = 2,
-	}
-)
-aZ:AddToggle("localtracers", { Text = "Draw Local Tracers", Default = false })
-aZ:AddLabel("Local Tracers Color")
-	:AddColorPicker("localtracerscolor", { Default = Color3.fromRGB(59, 255, 50), Title = "Local Tracer Color" })
-aZ:AddDropdown(
-	"localtracersmaterial",
-	{
-		Text = "Local Tracer Material",
-		Values = { "Plastic", "SmoothPlastic", "ForceField", "Neon", "Glass" },
-		Default = 1,
-		Multi = false,
-	}
-)
-aZ:AddSlider(
-	"localtracerstransparency",
-	{
-		Text = "Local Tracer Transparency",
-		Default = 0.5,
-		Min = 0,
-		Max = 1,
-		Rounding = 2,
-	}
-)
-aZ:AddSlider("bullettracersize", { Text = "Bullet Tracer Size", Default = 0.1, Min = 0.01, Max = 1, Rounding = 2 })
-
-
-	ac.visuals = {
-		teamFilterStep = aH,
-		applyLighting = aV,
-		unload = function()
-			aT()
-		end,
-	}
-end
-
-function ab.step()
-end
-
-function ab.unload()
-end
-
-return ab
-end function a.g()local ab=a.cache.g if not ab then ab={c=aa()}a.cache.g=ab end return ab.c end end do local function aa()
-local ab = {}
-
-function ab.build(ac)
-	local ad = ac.flags
-	local ae = ac.tv
-	local af = ac.ov
-	local ag = ac.util
-	local ah = ac.Players
-	local ai = ac.RunService
-	local aj = ac.UserInputService
-	local ak = ac.LocalPlayer
-	local al = ac.RS
-	local am = ac.Library
-	local an = ac.Tabs
-	local ao = ac.HttpService
-	local ap = ac.manipulation
-	local aq = ac.RecoilController
-	local ar = ac.AimController
-	local as = ac.FiremodeController
-	local at = ac.Trajectory
-	local au = ac.InventoryController
-	local av = ac.CameraShaker
-	local aw = ac.paidToggleKeys
-	local ax = ac.paidOptionKeys
-local ay = true
-local az = 10
-local aA = 200
-local aB = Drawing.new("Text")
-aB.Text = "Moderators\nChecking players..."
-aB.Position = Vector2.new(az, aA)
-aB.Size = 14
-aB.Color = Color3.fromRGB(255, 255, 255)
-aB.Outline = true
-aB.OutlineColor = Color3.fromRGB(0, 0, 0)
-aB.Visible = ay
-local aC = {}
-local aD = {}
-local aE
-local aF
-
-local function aG()
-	LPH_ATTRIBUTES(VM(NONE))
-	local aH = {}
-	for aI, aJ in pairs(aC) do
-		if aI.Parent == ah and aJ.IsModerator then
-			local aK = {}
-			if aJ.Rank >= 240 then
-				aK[#aK + 1] = "Rank " .. aJ.Rank
+			if aH.ControlPanel then
+				aI[#aI + 1] = "Control Panel"
 			end
-			if aJ.ControlPanel then
-				aK[#aK + 1] = "Control Panel"
-			end
-			aH[#aH + 1] = {
-				SortName = aI.Name:lower(),
-				Text = string.format("%s (@%s) [%s]", aI.DisplayName, aI.Name, table.concat(aK, ", ")),
+			aF[#aF + 1] = {
+				SortName = aG.Name:lower(),
+				Text = string.format("%s (@%s) [%s]", aG.DisplayName, aG.Name, table.concat(aI, ", ")),
 			}
 		end
 	end
-	table.sort(aH, function(aI, aJ)
-		return aI.SortName < aJ.SortName
+	table.sort(aF, function(aG, aH)
+		return aG.SortName < aH.SortName
 	end)
 
-	local aI = {}
-	for aJ, aK in ipairs(aH) do
-		aI[#aI + 1] = aK.Text
+	local aG = {}
+	for aH, aI in ipairs(aF) do
+		aG[#aG + 1] = aI.Text
 	end
-	if aB then
-		aB.Text = "Moderators\n" .. (#aI > 0 and table.concat(aI, "\n") or "No moderators online")
+	if az then
+		az.Text = "Moderators\n" .. (#aG > 0 and table.concat(aG, "\n") or "No moderators online")
 	end
 end
 
-local function aH(aI)
+local function aF(aG)
 	LPH_ATTRIBUTES(VM(NONE))
-	if aD[aI] then
-		aD[aI]:Disconnect()
+	if aB[aG] then
+		aB[aG]:Disconnect()
 	end
 
-	local aJ = aI:GetAttribute("ControlPanelAccess") == true
-	local aK = {
+	local aH = aG:GetAttribute("ControlPanelAccess") == true
+	local aI = {
 		Rank = 0,
-		ControlPanel = aJ,
-		IsModerator = aJ,
+		ControlPanel = aH,
+		IsModerator = aH,
 	}
-	aC[aI] = aK
-	aG()
+	aA[aG] = aI
+	aE()
 
-	aD[aI] = aI:GetAttributeChangedSignal("ControlPanelAccess"):Connect(function()
-		aK.ControlPanel = aI:GetAttribute("ControlPanelAccess") == true
-		aK.IsModerator = aK.Rank >= 240 or aK.ControlPanel
-		aG()
+	aB[aG] = aG:GetAttributeChangedSignal("ControlPanelAccess"):Connect(function()
+		aI.ControlPanel = aG:GetAttribute("ControlPanelAccess") == true
+		aI.IsModerator = aI.Rank >= 240 or aI.ControlPanel
+		aE()
 	end)
 
 	task.spawn(function()
-		local aL, aM = pcall(aI.GetRankInGroup, aI, 32519006)
-		if aC[aI] ~= aK then
+		local aJ, aK = pcall(aG.GetRankInGroup, aG, 32519006)
+		if aA[aG] ~= aI then
 			return
 		end
-		aK.Rank = aL and aM or 0
-		aK.IsModerator = aK.Rank >= 240 or aK.ControlPanel
-		aG()
+		aI.Rank = aJ and aK or 0
+		aI.IsModerator = aI.Rank >= 240 or aI.ControlPanel
+		aE()
 	end)
 end
 
-local function aI(aJ)
+local function aG(aH)
 	LPH_ATTRIBUTES(VM(NONE))
-	if aD[aJ] then
-		aD[aJ]:Disconnect()
-		aD[aJ] = nil
+	if aB[aH] then
+		aB[aH]:Disconnect()
+		aB[aH] = nil
 	end
-	aC[aJ] = nil
-	aG()
+	aA[aH] = nil
+	aE()
 end
 
-for aJ, aK in ipairs(ah:GetPlayers()) do
-	aH(aK)
+for aH, aI in ipairs(ah:GetPlayers()) do
+	aF(aI)
 end
-aE = ah.PlayerAdded:Connect(aH)
-aF = ah.PlayerRemoving:Connect(aI)
+aC = ah.PlayerAdded:Connect(aF)
+aD = ah.PlayerRemoving:Connect(aG)
 
+local aH
+local aI
 local aJ
-local aK
-local aL
-local function aM(aN)
+local function aK(aL)
+	if aH then
+		aH:Disconnect()
+		aH = nil
+	end
+	local aM = aL
+		and (aL:FindFirstChildWhichIsA("Humanoid") or aL:WaitForChild("Humanoid", 5))
+	if not aM then
+		return
+	end
+	local aN = false
+	local function aO()
+		if not ae("walkspeedenabled", false) or aN then
+			return
+		end
+		aN = true
+		aM.WalkSpeed = af("walkspeed", 16)
+		aN = false
+	end
+	aO()
+	aH = aM:GetPropertyChangedSignal("WalkSpeed"):Connect(aO)
+end
+local function aL(aM)
 	if aJ then
 		aJ:Disconnect()
 		aJ = nil
 	end
-	local aO = aN
-		and (aN:FindFirstChildWhichIsA("Humanoid") or aN:WaitForChild("Humanoid", 5))
-	if not aO then
+	local aN = aM
+		and (aM:FindFirstChildWhichIsA("Humanoid") or aM:WaitForChild("Humanoid", 5))
+	if not aN then
 		return
 	end
-	local aP = false
-	local function aQ()
-		if not ae("walkspeedenabled", false) or aP then
+	local aO = false
+	local function aP()
+		if not ae("jumppowerenabled", false) or aO then
 			return
 		end
-		aP = true
-		aO.WalkSpeed = af("walkspeed", 16)
-		aP = false
+		aO = true
+		aN.UseJumpPower = true
+		aN.JumpPower = af("jumppower", 50)
+		aO = false
 	end
-	aQ()
-	aJ = aO:GetPropertyChangedSignal("WalkSpeed"):Connect(aQ)
+	aP()
+	aJ = aN:GetPropertyChangedSignal("JumpPower"):Connect(aP)
 end
-local function aN(aO)
-	if aL then
-		aL:Disconnect()
-		aL = nil
-	end
-	local aP = aO
-		and (aO:FindFirstChildWhichIsA("Humanoid") or aO:WaitForChild("Humanoid", 5))
-	if not aP then
-		return
-	end
-	local aQ = false
-	local function aR()
-		if not ae("jumppowerenabled", false) or aQ then
-			return
-		end
-		aQ = true
-		aP.UseJumpPower = true
-		aP.JumpPower = af("jumppower", 50)
-		aQ = false
-	end
-	aR()
-	aL = aP:GetPropertyChangedSignal("JumpPower"):Connect(aR)
-end
-aK = ak.CharacterAdded:Connect(function(aO)
-	aM(aO)
-	aN(aO)
+aI = ak.CharacterAdded:Connect(function(aM)
+	aK(aM)
+	aL(aM)
 end)
-aM(ak.Character)
-aN(ak.Character)
+aK(ak.Character)
+aL(ak.Character)
 
-local aO
-local aP
-local aQ = 0
-local function aR(aS)
+local aM
+local aN
+local aO = 0
+local function aP(aQ)
 	LPH_ATTRIBUTES(VM(NONE))
-	if not ad.antiaimspin and not aO then
+	if not ad.antiaimspin and not aM then
 		return
 	end
-	local aT = ak.Character
-	local aU = aT and aT:FindFirstChildWhichIsA("Humanoid")
-	local aV = aT and aT:FindFirstChild("HumanoidRootPart")
-	if not (aU and aV) then
+	local aR = ak.Character
+	local aS = aR and aR:FindFirstChildWhichIsA("Humanoid")
+	local aT = aR and aR:FindFirstChild("HumanoidRootPart")
+	if not (aS and aT) then
 		return
 	end
-	local aW = aU.Sit
-		or aU.SeatPart ~= nil
+	local aU = aS.Sit
+		or aS.SeatPart ~= nil
 		or ak:GetAttribute("InVehicle") == true
-		or aT:GetAttribute("InVehicle") == true
-		or aV:FindFirstChild("SeatWeld") ~= nil
+		or aR:GetAttribute("InVehicle") == true
+		or aT:FindFirstChild("SeatWeld") ~= nil
 
-	if ad.antiaimspin and not aW then
-		if aO ~= aU then
-			if aO and aO.Parent and aP ~= nil then
-				aO.AutoRotate = aP
+	if ad.antiaimspin and not aU then
+		if aM ~= aS then
+			if aM and aM.Parent and aN ~= nil then
+				aM.AutoRotate = aN
 			end
-			aO = aU
-			aP = aU.AutoRotate
-			aQ = select(2, aV.CFrame:ToOrientation())
+			aM = aS
+			aN = aS.AutoRotate
+			aO = select(2, aT.CFrame:ToOrientation())
 		end
-		aU.AutoRotate = false
-	elseif aO then
-		if aO.Parent and aP ~= nil then
-			aO.AutoRotate = aP
+		aS.AutoRotate = false
+	elseif aM then
+		if aM.Parent and aN ~= nil then
+			aM.AutoRotate = aN
 		end
-		aO = nil
-		aP = nil
+		aM = nil
+		aN = nil
 	end
 
-	if ad.antiaimspin and not aW then
-		aQ = (aQ + math.rad(af("antiaimspinspeed", 180)) * aS) % math.tau
-		aV.CFrame = CFrame.new(aV.Position) * CFrame.Angles(0, aQ, 0)
+	if ad.antiaimspin and not aU then
+		
+		local aV = ac.lookHold
+		local aW = aV and aV.dir and os.clock() <= aV.untilT and aV.dir
+		if aW then
+			aO = math.atan2(-aW.X, -aW.Z)
+		else
+			aO = (aO + math.rad(af("antiaimspinspeed", 180)) * aQ) % math.tau
+		end
+		aT.CFrame = CFrame.new(aT.Position) * CFrame.Angles(0, aO, 0)
 	end
 end
-if la_is_premium then
-    local aS = an.Misc:AddLeftGroupbox("Movement")
-    aS:AddToggle(
+do
+    local aQ = an.Misc:AddLeftGroupbox("Movement")
+    aQ:AddToggle(
     	"walkspeedenabled",
     	{ Text = "WalkSpeed", Default = false }
     )
-    Toggles.walkspeedenabled:OnChanged(function(aT)
-    	aM(ak.Character)
+    Toggles.walkspeedenabled:OnChanged(function(aR)
+    	aK(ak.Character)
     end)
-    aS:AddSlider("walkspeed", { Text = "WalkSpeed Value", Default = 16, Min = 0, Max = 50, Rounding = 0 })
-    Options.walkspeed:OnChanged(function(aT)
-    	aM(ak.Character)
+    aQ:AddSlider("walkspeed", { Text = "WalkSpeed Value", Default = 16, Min = 0, Max = 50, Rounding = 0 })
+    Options.walkspeed:OnChanged(function(aR)
+    	aK(ak.Character)
     end)
-    aS:AddToggle(
+    aQ:AddToggle(
     	"jumppowerenabled",
     	{ Text = "JumpPower", Default = false }
     )
-    Toggles.jumppowerenabled:OnChanged(function(aT)
-    	aN(ak.Character)
+    Toggles.jumppowerenabled:OnChanged(function(aR)
+    	aL(ak.Character)
     end)
-    aS:AddSlider(
+    aQ:AddSlider(
     	"jumppower",
     	{
     		Text = "JumpPower Value",
@@ -4037,102 +4361,102 @@ if la_is_premium then
     		Rounding = 0,
     	}
     )
-    Options.jumppower:OnChanged(function(aT)
-    	aN(ak.Character)
+    Options.jumppower:OnChanged(function(aR)
+    	aL(ak.Character)
     end)
-    aS:AddToggle("omnisprint", { Text = "Omni Sprint", Default = false })
-    aS:AddToggle(
+    aQ:AddToggle("omnisprint", { Text = "Omni Sprint", Default = false })
+    aQ:AddToggle(
     	"nohurtslowdown",
     	{ Text = "No Hurt Slowdown", Default = false }
     )
 
-    local aT = an.Misc:AddLeftGroupbox("Anti Aim")
-    aT:AddToggle(
+    local aR = an.Misc:AddLeftGroupbox("Anti Aim")
+    aR:AddToggle(
     	"antiaimpitch",
     	{
     		Text = "Head Pitch",
     		Default = false,
     	}
     )
-    aT:AddSlider(
+    aR:AddSlider(
     	"antiaimpitchangle",
     	{ Text = "Head Pitch Angle", Default = 90, Min = -180, Max = 180, Rounding = 0, Suffix = "°" }
     )
-    aT:AddToggle(
+    aR:AddToggle(
     	"gunup",
     	{ Text = "Always Gun Up", Default = false }
     )
-    aT:AddToggle("antiaimspin", { Text = "Spin", Default = false })
-    Toggles.antiaimspin:OnChanged(function(aU)
-    	if not aU and aO then
-    		if aO.Parent and aP ~= nil then
-    			aO.AutoRotate = aP
+    aR:AddToggle("antiaimspin", { Text = "Spin", Default = false })
+    Toggles.antiaimspin:OnChanged(function(aS)
+    	if not aS and aM then
+    		if aM.Parent and aN ~= nil then
+    			aM.AutoRotate = aN
     		end
-    		aO = nil
-    		aP = nil
+    		aM = nil
+    		aN = nil
     	end
     end)
-    aT:AddSlider(
+    aR:AddSlider(
     	"antiaimspinspeed",
     	{ Text = "Spin Speed", Default = 180, Min = 0, Max = 1080, Rounding = 0, Suffix = "°/s" }
     )
 
-    local function aU(aV)
-    	local aW = aV and aV:FindFirstChild("CharacterValues")
-    	if not aW then
+    local function aS(aT)
+    	local aU = aT and aT:FindFirstChild("CharacterValues")
+    	if not aU then
     		return
     	end
 	if ad.antisuppression then
-     		local aX = aW:FindFirstChild("Suppression")
-    		local aY = aW:FindFirstChild("Deafening")
-    		if aX then
-    			aX.Value = 0
+     		local aV = aU:FindFirstChild("Suppression")
+    		local aW = aU:FindFirstChild("Deafening")
+    		if aV then
+    			aV.Value = 0
     		end
-    		if aY then
-    			aY.Value = 0
+    		if aW then
+    			aW.Value = 0
     		end
     	end
     end
 
-    local aV = game:GetService("Lighting"):FindFirstChild("SuppressionDepthOfField")
-    local aW = aV and aV.Enabled
-    local aX = 0
-    function antiEffectsStep(aY)
+    local aT = game:GetService("Lighting"):FindFirstChild("SuppressionDepthOfField")
+    local aU = aT and aT.Enabled
+    local aV = 0
+    function antiEffectsStep(aW)
     	LPH_ATTRIBUTES(VM(NONE))
     	if not (ad.antisuppression or ad.antiflashbang) then
     		return
     	end
-    	aX = aX + aY
-    	if aX < 0.5 then
+    	aV = aV + aW
+    	if aV < 0.5 then
     		return
     	end
-    	aX = 0
-    	aU(ak.Character)
+    	aV = 0
+    	aS(ak.Character)
 
      	if ad.antisuppression then
-     		aV = game:GetService("Lighting"):FindFirstChild("SuppressionDepthOfField")
-    			or aV
-    		if aV and aV:IsA("PostEffect") then
-    			aV.Enabled = false
+     		aT = game:GetService("Lighting"):FindFirstChild("SuppressionDepthOfField")
+    			or aT
+    		if aT and aT:IsA("PostEffect") then
+    			aT.Enabled = false
     		end
     	end
 
      	if ad.antiflashbang then
-    		for aZ, a_ in ipairs({ game:GetService("Lighting"), ak:FindFirstChildOfClass("PlayerGui") }) do
-    			if a_ then
-    				for a0, a1 in ipairs(a_:GetDescendants()) do
-    					local a2 = a1.Name:lower()
+    		for aX, aY in ipairs({ game:GetService("Lighting"), ak:FindFirstChildOfClass("PlayerGui") }) do
+    			if aY then
+    				for aZ, a_ in ipairs(aY:GetDescendants()) do
+    					local a0 = a_.Name:lower()
     					if
-    						a2:find("flash", 1, true)
-    						or a2:find("stun", 1, true)
-    						or a2:find("concussion", 1, true)
+    						a0:find("flash", 1, true)
+    						or a0:find("stun", 1, true)
+    						or a0:find("concussion", 1, true)
     					then
-    						if a1:IsA("PostEffect") then
-    							a1.Enabled = false
-    						elseif a1:IsA("LayerCollector") then
-    							a1.Enabled = false
-    						elseif a1:IsA("GuiObject") then
-    							a1.Visible = false
+    						if a_:IsA("PostEffect") then
+    							a_.Enabled = false
+    						elseif a_:IsA("LayerCollector") then
+    							a_.Enabled = false
+    						elseif a_:IsA("GuiObject") then
+    							a_.Visible = false
     						end
     					end
     				end
@@ -4141,22 +4465,22 @@ if la_is_premium then
     	end
     end
 
-    local aY = an.Misc:AddLeftGroupbox("Screen Effects")
-    aY:AddToggle(
+    local aW = an.Misc:AddLeftGroupbox("Screen Effects")
+    aW:AddToggle(
     	"antisuppression",
     	{
     		Text = "Anti Suppression",
     		Default = false,
     	}
     )
-    Toggles.antisuppression:OnChanged(function(aZ)
-    	if aZ then
-    		aU(ak.Character)
-    	elseif aV and aV.Parent then
-    		aV.Enabled = aW
+    Toggles.antisuppression:OnChanged(function(aX)
+    	if aX then
+    		aS(ak.Character)
+    	elseif aT and aT.Parent then
+    		aT.Enabled = aU
     	end
     end)
-    aY:AddToggle(
+    aW:AddToggle(
     	"antiflashbang",
     	{
     		Text = "Anti Flashbang",
@@ -4164,9 +4488,9 @@ if la_is_premium then
     	}
     )
 
-    local aZ = an.Misc:AddRightGroupbox("Healing")
-    aZ:AddToggle("autoheal", { Text = "Auto Heal", Default = false })
-    aZ:AddSlider("autohealmindamage", {
+    local aX = an.Misc:AddRightGroupbox("Healing")
+    aX:AddToggle("autoheal", { Text = "Auto Heal", Default = false })
+    aX:AddSlider("autohealmindamage", {
     	Text = "Min Damage",
     	Default = 30,
     	Min = 0,
@@ -4174,75 +4498,75 @@ if la_is_premium then
     	Rounding = 0,
     	Suffix = "%",
     })
-    aZ:AddToggle("instantheal", { Text = "Instant Heal", Default = false })
-    local a_ = ac.functions.healLimb.upv and ac.functions.healLimb.upv[7]
-    local a0 = {}
-    aZ:AddToggle("nobandageslowdown", { Text = "No Bandage Slowdown", Default = false })
-    Toggles["nobandageslowdown"]:OnChanged(function(a1)
-    	if la_is_premium ~= true or not ac.functions.healLimb.func then return end
-    	if a1 then
-    		debug.setupvalue(ac.functions.healLimb.func, 7, a0)
+    aX:AddToggle("instantheal", { Text = "Instant Heal", Default = false })
+    local aY = ac.functions.healLimb.upv and ac.functions.healLimb.upv[7]
+    local aZ = {}
+    aX:AddToggle("nobandageslowdown", { Text = "No Bandage Slowdown", Default = false })
+    Toggles["nobandageslowdown"]:OnChanged(function(a_)
+    	if not ac.functions.healLimb.func then return end
+    	if a_ then
+    		debug.setupvalue(ac.functions.healLimb.func, 7, aZ)
     	else
-    		debug.setupvalue(ac.functions.healLimb.func, 7, a_)
+    		debug.setupvalue(ac.functions.healLimb.func, 7, aY)
     	end
     end)
-    aZ:AddToggle("fastrevive", { Text = "Fast Revive", Default = false })
+    aX:AddToggle("fastrevive", { Text = "Fast Revive", Default = false })
 
-    local a1 = an.Misc:AddRightGroupbox("Vehicles")
-    a1:AddToggle("carmods", { Text = "Car Mods", Default = false })
-    Toggles["carmods"]:OnChanged(function(a2)
+    local a_ = an.Misc:AddRightGroupbox("Vehicles")
+    a_:AddToggle("carmods", { Text = "Car Mods", Default = false })
+    Toggles["carmods"]:OnChanged(function(a0)
     	ac.cars.apply()
     end)
-    a1:AddDropdown(
+    a_:AddDropdown(
     	"carprofile",
     	{ Text = "Car", Values = ac.cars.entries, Default = 1, Multi = false, AllowNull = true }
     )
-    Options.carprofile:OnChanged(function(a2)
-    	ac.cars.state.selected = a2
-    	local a3 = ac.cars.profile()
-    	if not a3 then
+    Options.carprofile:OnChanged(function(a0)
+    	ac.cars.state.selected = a0
+    	local a1 = ac.cars.profile()
+    	if not a1 then
     		return
     	end
-    	for a4 in pairs(ac.cars.defaults) do
-    		if Options["car_" .. a4] then
-    			Options["car_" .. a4]:SetValue(a3[a4])
+    	for a2 in pairs(ac.cars.defaults) do
+    		if Options["car_" .. a2] then
+    			Options["car_" .. a2]:SetValue(a1[a2])
     		end
     	end
-    	for a4 in pairs(ac.cars.boolDefaults) do
-    		if Toggles["car_" .. a4] then
-    			Toggles["car_" .. a4]:SetValue(a3[a4])
+    	for a2 in pairs(ac.cars.boolDefaults) do
+    		if Toggles["car_" .. a2] then
+    			Toggles["car_" .. a2]:SetValue(a1[a2])
     		end
     	end
-    	for a4, a5 in pairs({
+    	for a2, a3 in pairs({
     		ChassisType = { "Wheeled", "Tracked" },
     		DriveType = { "FWD", "RWD", "AWD" },
     		Differential = { "Open", "Locked" },
     	}) do
-    		if Options["car_" .. a4] then
-    			Options["car_" .. a4]:SetValue(a3[a4])
+    		if Options["car_" .. a2] then
+    			Options["car_" .. a2]:SetValue(a1[a2])
     		end
     	end
-    	for a4 = -1, 6 do
-    		local a5 = a3.Ratios and a3.Ratios[a4] or 0
-    		if Options["car_ratio_" .. tostring(a4)] then
-    			Options["car_ratio_" .. tostring(a4)]:SetValue(a5)
+    	for a2 = -1, 6 do
+    		local a3 = a1.Ratios and a1.Ratios[a2] or 0
+    		if Options["car_ratio_" .. tostring(a2)] then
+    			Options["car_ratio_" .. tostring(a2)]:SetValue(a3)
     		end
     	end
-    	for a4 = 1, 4 do
-    		local a5 = a3.Wheels and a3.Wheels[a4]
-    		if Toggles["car_wheel_" .. a4 .. "_drive"] then
-    			Toggles["car_wheel_" .. a4 .. "_drive"]:SetValue(a5 and a5.Drive == true or true)
+    	for a2 = 1, 4 do
+    		local a3 = a1.Wheels and a1.Wheels[a2]
+    		if Toggles["car_wheel_" .. a2 .. "_drive"] then
+    			Toggles["car_wheel_" .. a2 .. "_drive"]:SetValue(a3 and a3.Drive == true or true)
     		end
-    		if Toggles["car_wheel_" .. a4 .. "_steer"] then
-    			Toggles["car_wheel_" .. a4 .. "_steer"]:SetValue(a5 and a5.Steer == 1 or a4 <= 2)
+    		if Toggles["car_wheel_" .. a2 .. "_steer"] then
+    			Toggles["car_wheel_" .. a2 .. "_steer"]:SetValue(a3 and a3.Steer == 1 or a2 <= 2)
     		end
     	end
     	ac.cars.syncJson()
     	ac.cars.apply()
     end)
-    a1:AddLabel("Saved profiles are stored per car and faction")
+    a_:AddLabel("Saved profiles are stored per car and faction")
 
-    local a2 = {
+    local a0 = {
     	{ "FinalDrive", "Final Drive", 0, 20, 2 },
     	{ "ShiftRPM", "Shift RPM", 1000, 15000, 0 },
     	{ "IdleRPM", "Idle RPM", 0, 5000, 0 },
@@ -4275,82 +4599,82 @@ if la_is_premium then
     	{ "CompressionDampingModifier", "Compression Damping", 0, 10, 2 },
     	{ "DamperActiveness", "Damper Activeness", 0, 2, 2 },
     }
-    for a3, a4 in ipairs({ "Reverse", "Neutral", "Gear 1", "Gear 2", "Gear 3", "Gear 4", "Gear 5", "Gear 6" }) do
-    	local a5 = a3 - 2
-    	local a6 = "car_ratio_" .. tostring(a5)
-    	a1:AddSlider(a6, { Text = a4 .. " Ratio", Default = 0, Min = -15, Max = 15, Rounding = 3 })
-    	Options[a6]:OnChanged(function(a7)
-    		local a8 = ac.cars.profile()
-    		if not a8 then
+    for a1, a2 in ipairs({ "Reverse", "Neutral", "Gear 1", "Gear 2", "Gear 3", "Gear 4", "Gear 5", "Gear 6" }) do
+    	local a3 = a1 - 2
+    	local a4 = "car_ratio_" .. tostring(a3)
+    	a_:AddSlider(a4, { Text = a2 .. " Ratio", Default = 0, Min = -15, Max = 15, Rounding = 3 })
+    	Options[a4]:OnChanged(function(a5)
+    		local a6 = ac.cars.profile()
+    		if not a6 then
     			return
     		end
-    		a8.Ratios = a8.Ratios or {}
-    		a8.Ratios[a5] = a7
+    		a6.Ratios = a6.Ratios or {}
+    		a6.Ratios[a3] = a5
     		ac.cars.syncJson()
     		ac.cars.apply()
     	end)
     end
-    for a3, a4 in ipairs({ "Front Left", "Front Right", "Rear Left", "Rear Right" }) do
-    	local a5 = "car_wheel_" .. a3 .. "_"
-    	a1:AddToggle(a5 .. "drive", { Text = a4 .. " Drive", Default = true })
-    	a1:AddToggle(a5 .. "steer", { Text = a4 .. " Steer", Default = a3 <= 2 })
-    	Toggles[a5 .. "drive"]:OnChanged(function(a6)
-    		local a7 = ac.cars.profile()
-    		if not a7 then
+    for a1, a2 in ipairs({ "Front Left", "Front Right", "Rear Left", "Rear Right" }) do
+    	local a3 = "car_wheel_" .. a1 .. "_"
+    	a_:AddToggle(a3 .. "drive", { Text = a2 .. " Drive", Default = true })
+    	a_:AddToggle(a3 .. "steer", { Text = a2 .. " Steer", Default = a1 <= 2 })
+    	Toggles[a3 .. "drive"]:OnChanged(function(a4)
+    		local a5 = ac.cars.profile()
+    		if not a5 then
     			return
     		end
-    		a7.Wheels = a7.Wheels or {}
-    		a7.Wheels[a3] = a7.Wheels[a3]
-    			or { Name = a4:gsub(" ", ""), Drive = true, Steer = a3 <= 2 and 1 or 0 }
-    		a7.Wheels[a3].Drive = a6
+    		a5.Wheels = a5.Wheels or {}
+    		a5.Wheels[a1] = a5.Wheels[a1]
+    			or { Name = a2:gsub(" ", ""), Drive = true, Steer = a1 <= 2 and 1 or 0 }
+    		a5.Wheels[a1].Drive = a4
     		ac.cars.syncJson()
     		ac.cars.apply()
     	end)
-    	Toggles[a5 .. "steer"]:OnChanged(function(a6)
-    		local a7 = ac.cars.profile()
-    		if not a7 then
+    	Toggles[a3 .. "steer"]:OnChanged(function(a4)
+    		local a5 = ac.cars.profile()
+    		if not a5 then
     			return
     		end
-    		a7.Wheels = a7.Wheels or {}
-    		a7.Wheels[a3] = a7.Wheels[a3]
-    			or { Name = a4:gsub(" ", ""), Drive = true, Steer = a3 <= 2 and 1 or 0 }
-    		a7.Wheels[a3].Steer = a6 and 1 or 0
+    		a5.Wheels = a5.Wheels or {}
+    		a5.Wheels[a1] = a5.Wheels[a1]
+    			or { Name = a2:gsub(" ", ""), Drive = true, Steer = a1 <= 2 and 1 or 0 }
+    		a5.Wheels[a1].Steer = a4 and 1 or 0
     		ac.cars.syncJson()
     		ac.cars.apply()
     	end)
     end
-    for a3, a4 in ipairs(a2) do
-    	local a5, a6, a7, a8, a9 = table.unpack(a4)
-    	a1:AddSlider(
-    		"car_" .. a5,
-    		{ Text = a6, Default = ac.cars.defaults[a5], Min = a7, Max = a8, Rounding = a9 }
+    for a1, a2 in ipairs(a0) do
+    	local a3, a4, a5, a6, a7 = table.unpack(a2)
+    	a_:AddSlider(
+    		"car_" .. a3,
+    		{ Text = a4, Default = ac.cars.defaults[a3], Min = a5, Max = a6, Rounding = a7 }
     	)
-    	Options["car_" .. a5]:OnChanged(function(b)
-    		ac.cars.setControl(a5, b)
+    	Options["car_" .. a3]:OnChanged(function(a8)
+    		ac.cars.setControl(a3, a8)
     	end)
     end
-    for a3, a4 in pairs(ac.cars.boolDefaults) do
-    	a1:AddToggle("car_" .. a3, { Text = a3, Default = a4 })
-    	Toggles["car_" .. a3]:OnChanged(function(a5)
-    		ac.cars.setControl(a3, a5)
+    for a1, a2 in pairs(ac.cars.boolDefaults) do
+    	a_:AddToggle("car_" .. a1, { Text = a1, Default = a2 })
+    	Toggles["car_" .. a1]:OnChanged(function(a3)
+    		ac.cars.setControl(a1, a3)
     	end)
     end
-    for a3, a4 in pairs({
+    for a1, a2 in pairs({
     	ChassisType = { "Wheeled", "Tracked" },
     	DriveType = { "FWD", "RWD", "AWD" },
     	Differential = { "Open", "Locked" },
     }) do
-    	a1:AddDropdown(
-    		"car_" .. a3,
-    		{ Text = a3, Values = a4, Default = ac.cars.choiceDefaults[a3], Multi = false }
+    	a_:AddDropdown(
+    		"car_" .. a1,
+    		{ Text = a1, Values = a2, Default = ac.cars.choiceDefaults[a1], Multi = false }
     	)
-    	Options["car_" .. a3]:OnChanged(function(a5)
-    		ac.cars.setControl(a3, a5)
+    	Options["car_" .. a1]:OnChanged(function(a3)
+    		ac.cars.setControl(a1, a3)
     	end)
     end
-    a1:AddInput("carsprofiles", { Text = "Profile data", Default = "{}" })
-    Options.carsprofiles:OnChanged(function(a3)
-    	ac.cars.loadJson(a3)
+    a_:AddInput("carsprofiles", { Text = "Profile data", Default = "{}" })
+    Options.carsprofiles:OnChanged(function(a1)
+    	ac.cars.loadJson(a1)
     	ac.cars.syncJson()
     	ac.cars.apply()
     end)
@@ -4360,120 +4684,120 @@ if ac.cars.state.selected then
 end
 
 	ac.misc = {
-		movementStep = aR,
+		movementStep = aP,
 		antiEffectsStep = antiEffectsStep,
-		bindSettings = function(aS)
-local aT = "NUfjhQcETc"
+		bindSettings = function(aQ)
+local aR = "NUfjhQcETc"
 
-local function aU(aV)
-	local aW = http_request
+local function aS(aT)
+	local aU = http_request
 		or request
 		or (syn and syn.request)
 		or (fluxus and fluxus.request)
 		or (getgenv and getgenv().request)
-	if not aW then
+	if not aU then
 		am:Notify("No HTTP request function on this executor.")
 		return
 	end
-	local aX = ao:JSONEncode({
+	local aV = ao:JSONEncode({
 		cmd = "INVITE_BROWSER",
-		args = { code = aV },
+		args = { code = aT },
 		nonce = ao:GenerateGUID(false),
 	})
-	local aY = false
-	for aZ = 6463, 6472 do
-		local a_, a0 = pcall(aW, {
-			Url = ("http://127.0.0.1:%d/rpc?v=1"):format(aZ),
+	local aW = false
+	for aX = 6463, 6472 do
+		local aY, aZ = pcall(aU, {
+			Url = ("http://127.0.0.1:%d/rpc?v=1"):format(aX),
 			Method = "POST",
 			Headers = {
 				["Content-Type"] = "application/json",
 				["Origin"] = "https://discord.com",
 			},
-			Body = aX,
+			Body = aV,
 		})
-		if a_ and a0 and (a0.StatusCode == 200 or a0.Success) then
-			aY = true
+		if aY and aZ and (aZ.StatusCode == 200 or aZ.Success) then
+			aW = true
 			break
 		end
 	end
-	am:Notify(aY and "Opened the invite in Discord." or "Couldn't reach Discord (is it running?).")
+	am:Notify(aW and "Opened the invite in Discord." or "Couldn't reach Discord (is it running?).")
 end
 
-aS:AddButton({
+aQ:AddButton({
 	Text = "Join Discord",
 	Func = function()
-		aU(aT)
+		aS(aR)
 	end,
 })
-aS
+aQ
 	:AddToggle(
 		"ShowModeratorList",
 		{ Text = "Show Moderator List", Default = true }
 	)
-	:OnChanged(function(aV)
-		ay = aV
-		if aB then
-			aB.Visible = aV
+	:OnChanged(function(aT)
+		aw = aT
+		if az then
+			az.Visible = aT
 		end
 	end)
-aS:AddSlider(
+aQ:AddSlider(
 	"ModeratorListX",
 	{ Text = "Moderator List X", Default = 10, Min = 0, Max = 2000, Rounding = 0, Suffix = " px" }
 )
-Options.ModeratorListX:OnChanged(function(aV)
-	az = aV
-	if aB then
-		aB.Position = Vector2.new(az, aA)
+Options.ModeratorListX:OnChanged(function(aT)
+	ax = aT
+	if az then
+		az.Position = Vector2.new(ax, ay)
 	end
 end)
-aS:AddSlider(
+aQ:AddSlider(
 	"ModeratorListY",
 	{ Text = "Moderator List Y", Default = 200, Min = 0, Max = 1200, Rounding = 0, Suffix = " px" }
 )
-Options.ModeratorListY:OnChanged(function(aV)
-	aA = aV
-	if aB then
-		aB.Position = Vector2.new(az, aA)
+Options.ModeratorListY:OnChanged(function(aT)
+	ay = aT
+	if az then
+		az.Position = Vector2.new(ax, ay)
 	end
 end)
 
 		end,
 		unload = function()
+			if aH then
+				aH:Disconnect()
+				aH = nil
+			end
 			if aJ then
 				aJ:Disconnect()
 				aJ = nil
 			end
-			if aL then
-				aL:Disconnect()
-				aL = nil
+			if aI then
+				aI:Disconnect()
+				aI = nil
 			end
-			if aK then
-				aK:Disconnect()
-				aK = nil
+			if aM and aM.Parent and aN ~= nil then
+				aM.AutoRotate = aN
 			end
-			if aO and aO.Parent and aP ~= nil then
-				aO.AutoRotate = aP
+			aM = nil
+			local aQ = ak.Character and ak.Character:FindFirstChildWhichIsA("Humanoid")
+			if aQ then
+				aQ.PlatformStand = false
 			end
-			aO = nil
-			local aS = ak.Character and ak.Character:FindFirstChildWhichIsA("Humanoid")
-			if aS then
-				aS.PlatformStand = false
-			end
-			if aE then
-				aE:Disconnect()
-			end
-			if aF then
-				aF:Disconnect()
+			if aC then
+				aC:Disconnect()
 			end
 			if aD then
-				for aT, aU in pairs(aD) do
-					aU:Disconnect()
-					aD[aT] = nil
-				end
+				aD:Disconnect()
 			end
 			if aB then
-				aB:Remove()
-				aB = nil
+				for aR, aS in pairs(aB) do
+					aS:Disconnect()
+					aB[aR] = nil
+				end
+			end
+			if az then
+				az:Remove()
+				az = nil
 			end
 		end,
 	}
@@ -4486,7 +4810,7 @@ function ab.unload()
 end
 
 return ab
-end function a.h()local ab=a.cache.h if not ab then ab={c=aa()}a.cache.h=ab end return ab.c end end end
+end function a.g()local ab=a.cache.g if not ab then ab={c=aa()}a.cache.g=ab end return ab.c end end end
 
 if not LPH_OBFUSCATED then
 	LPH_ATTRIBUTES = function(...) end
@@ -4516,72 +4840,57 @@ if not LPH_OBFUSCATED then
 	end
 end
 
-local aa = a.a()
-aa.init()
 
-local ab = a.b()
-local ac, ad = ab.checkKey(getgenv().script_key)
-la_is_premium = true
-
-if not ac then
-    setclipboard("https://discord.gg/Z7tvDkBUxX")
-    game.Players.LocalPlayer:Kick("Please get a valid key from https://discord.gg/Z7tvDkBUxX, we have attempted to copy it to your clipboard")
-    return
+local aa = getgenv()
+local ab = "__vaultcc_cw"
+if aa[ab] then
+	pcall(aa[ab].unload)
+	aa[ab] = nil
 end
 
-local ae = {
-	ragebot = true, ragebotautoreload = true, ragebotwallbang = true,
-	walkspeedenabled = true, jumppowerenabled = true, omnisprint = true,
-	nohurtslowdown = true, antiaimpitch = true, gunup = true, antiaimspin = true,
-	antisuppression = true, antiflashbang = true, autoheal = true, instantheal = true,
-	nobandageslowdown = true, fastrevive = true, carmods = true,
-}
-local af = {
-	walkspeed = true, jumppower = true, antiaimpitchangle = true, antiaimspinspeed = true,
-	autohealmindamage = true,
-}
+local ac = a.a()
 
 do
-	local ag = game:GetService("Players").LocalPlayer
-	ag = ag and ag:FindFirstChild("PlayerScripts")
-	ag = ag and ag:FindFirstChild("PlayerModule")
-	local ah = ag and getscriptclosure and getscriptclosure(ag)
-	local ai = debug.getprotos or getprotos
-	if type(ah) == "function" and ai then
-		local aj, ak = pcall(ai, ah)
-		if aj then
-			for al, am in ak do
-				if type(am) == "function" then
-					local an = {}
+	local ad = game:GetService("Players").LocalPlayer
+	ad = ad and ad:FindFirstChild("PlayerScripts")
+	ad = ad and ad:FindFirstChild("PlayerModule")
+	local ae = ad and getscriptclosure and getscriptclosure(ad)
+	local af = debug.getprotos or getprotos
+	if type(ae) == "function" and af then
+		local ag, ah = pcall(af, ae)
+		if ag then
+			for ai, aj in ah do
+				if type(aj) == "function" then
+					local ak = {}
 					pcall(function()
-						an = debug.getconstants(am)
+						ak = debug.getconstants(aj)
 					end)
-					local ao, ap, aq, ar, as = false, false, false, false, false
-					for at, au in an do
-						if au == "StreamingHint" then ao = true end
-						if au == "Animator" then ap = true end
-						if au == "MovementPing" then as = true end
-						if au == "task" then aq = true end
-						if au == "random" then ar = true end
+					local al, am, an, ao, ap = false, false, false, false, false
+					for aq, ar in ak do
+						if ar == "StreamingHint" then al = true end
+						if ar == "Animator" then am = true end
+						if ar == "MovementPing" then ap = true end
+						if ar == "task" then an = true end
+						if ar == "random" then ao = true end
 					end
-					local at = 0
+					local aq = 0
 					pcall(function()
-						at = debug.getinfo(am).nups or 0
+						aq = debug.getinfo(aj).nups or 0
 					end)
-					if ao or ap or as or (aq and ar and at == 3) then
-						pcall(hookfunc, am, function() end)
-					elseif not as then
-						local au, av = pcall(ai, am)
-						if au then
-							for aw, ax in av do
-								if type(ax) == "function" then
-									local ay = {}
+					if al or am or ap or (an and ao and aq == 3) then
+						pcall(ac.hook, aj, function() end)
+					elseif not ap then
+						local ar, as = pcall(af, aj)
+						if ar then
+							for at, au in as do
+								if type(au) == "function" then
+									local av = {}
 									pcall(function()
-										ay = debug.getconstants(ax)
+										av = debug.getconstants(au)
 									end)
-									for az, aA in ay do
-										if aA == "MovementPing" then
-											pcall(hookfunc, ax, function() end)
+									for aw, ax in av do
+										if ax == "MovementPing" then
+											pcall(ac.hook, au, function() end)
 											break
 										end
 									end
@@ -4595,50 +4904,48 @@ do
 	end
 end
 
-local ag = "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/"
+local ad = "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/"
 
-Library = loadstring(game:HttpGet(ag .. "Library.lua"))()
-local ah = loadstring(game:HttpGet(ag .. "addons/ThemeManager.lua"))()
-local ai = loadstring(game:HttpGet(ag .. "addons/SaveManager.lua"))()
+Library = loadstring(game:HttpGet(ad .. "Library.lua"))()
+local ae = loadstring(game:HttpGet(ad .. "addons/ThemeManager.lua"))()
+local af = loadstring(game:HttpGet(ad .. "addons/SaveManager.lua"))()
 
-local aj = game:GetService("Players")
-local ak = game:GetService("RunService")
-local al = game:GetService("UserInputService")
-local am = game:GetService("HttpService")
-local an = aj.LocalPlayer
-local ao = game:GetService("ReplicatedStorage")
-local ap = ao.Client
-local aq = ap.Tools
-local ar = aq.Weapon.controllers
+local ag = game:GetService("Players")
+local ah = game:GetService("RunService")
+local ai = game:GetService("UserInputService")
+local aj = game:GetService("HttpService")
+local ak = ag.LocalPlayer
+local al = game:GetService("ReplicatedStorage")
+local am = al.Client
+local an = am.Tools
+local ao = an.Weapon.controllers
 
-local as = require(ar.RecoilController)
-local at = require(ar.AimController)
-local au = require(aq.Weapon.Muzzle.firemodes.FireController)
-local av = require(ao:WaitForChild("Shared"):WaitForChild("Ballistics"):WaitForChild("Trajectory"))
-local aw = require(ap:WaitForChild("Character"):WaitForChild("InventoryController"))
-local ax = require(ap:WaitForChild("GGCameraShaker"))
+local ap = require(ao.RecoilController)
+local aq = require(ao.AimController)
+local ar = require(an.Weapon.Muzzle.firemodes.FireController)
+local as = require(al:WaitForChild("Shared"):WaitForChild("Ballistics"):WaitForChild("Trajectory"))
+local at = require(am:WaitForChild("Character"):WaitForChild("InventoryController"))
+local au = require(am:WaitForChild("GGCameraShaker"))
 
-local function ay(az, aA)
+local function av(aw, ax)
 	LPH_ATTRIBUTES(VM(NONE))
-	if ae[az] and la_is_premium ~= true then return false end
-	local aB = Toggles and Toggles[az]
-	if aB and aB.Value ~= nil then
-		return aB.Value
+	local ay = Toggles and Toggles[aw]
+	if ay and ay.Value ~= nil then
+		return ay.Value
 	end
-	return aA
+	return ax
 end
 
-local function az(aA, aB)
+local function aw(ax, ay)
 	LPH_ATTRIBUTES(VM(NONE))
-	if af[aA] and la_is_premium ~= true then return aB end
-	local aC = Options and Options[aA]
-	if aC and aC.Value ~= nil then
-		return aC.Value
+	local az = Options and Options[ax]
+	if az and az.Value ~= nil then
+		return az.Value
 	end
-	return aB
+	return ay
 end
 
-local aA = {
+local ax = {
 	instantads = true,
 	aimanywhere = true,
 	noadsslowdown = true,
@@ -4681,169 +4988,181 @@ local aA = {
 	ESPMaster = false,
 }
 
-local function aB(aC)
-    return clonefunction and clonefunction(aC) or aC
-end
+local ay = ac.cloneOriginal
 
-local aC = {}
-aC.target = nil
+local az = {}
+az.target = nil
 
 
-local aD = a.c().create({
+local aA = a.b().create({
 	title = "Cold War - vault.cc",
 	folder = "VaultCC/ColdWar",
 	tabs = { "Combat", "ESP", "Visuals", "Misc", "Settings" },
 	keybind = "MenuKeybind",
 	ignore = { "MenuKeybind" },
-	beforeLoad = function(aD, aE)
-		if aD.misc and aD.misc.bindSettings then
-			aD.misc.bindSettings(aE)
+	beforeLoad = function(aA, aB)
+		if aA.misc and aA.misc.bindSettings then
+			aA.misc.bindSettings(aB)
 		end
 	end,
 })
-local aE = a.e()
-local aF = a.f()
-local aG = a.g()
-local aH = a.h()
+local aB = a.d()
+local aC = a.e()
+local aD = a.f()
+local aE = a.g()
 
-local aI = {
-	Players = aj,
-	RunService = ak,
-	UserInputService = al,
-	LocalPlayer = an,
-	RS = ao,
-	Client = ap,
-	Tools = aq,
-	WeaponControllers = ar,
-	RecoilController = as,
-	AimController = at,
-	FiremodeController = au,
-	Trajectory = av,
-	InventoryController = aw,
-	CameraShaker = ax,
-	cloneOriginal = aB,
+local aF = {
+	Players = ag,
+	RunService = ah,
+	UserInputService = ai,
+	LocalPlayer = ak,
+	RS = al,
+	Client = am,
+	Tools = an,
+	WeaponControllers = ao,
+	RecoilController = ap,
+	AimController = aq,
+	FiremodeController = ar,
+	Trajectory = as,
+	InventoryController = at,
+	CameraShaker = au,
+	cloneOriginal = ay,
+	hook = ac.hook,
 	Library = Library,
-	ThemeManager = ah,
-	SaveManager = ai,
-	HttpService = am,
-	paidToggleKeys = ae,
-	paidOptionKeys = af,
-	flags = aA,
-	tv = ay,
-	ov = az,
-	util = aC,
-	manipulation = aE,
+	ThemeManager = ae,
+	SaveManager = af,
+	HttpService = aj,
+	flags = ax,
+	tv = av,
+	ov = aw,
+	util = az,
+	manipulation = aB,
 }
 
-aD.build(aI)
-aF.build(aI)
-aG.build(aI)
-aH.build(aI)
+aA.build(aF)
+aC.build(aF)
+aD.build(aF)
+aE.build(aF)
 
-for aJ in aA do
-	local aK = Toggles and Toggles[aJ]
-	if aK then
-		aK:OnChanged(function(aL)
-			if ae[aJ] and la_is_premium ~= true then
-				aA[aJ] = false
-				return
-			end
-			aA[aJ] = aL
+for aG in ax do
+	local aH = Toggles and Toggles[aG]
+	if aH then
+		aH:OnChanged(function(aI)
+			ax[aG] = aI
 		end)
-		if aK.Value ~= nil then
-			aA[aJ] = (ae[aJ] and la_is_premium ~= true) and false or aK.Value
+		if aH.Value ~= nil then
+			ax[aG] = aH.Value
 		end
 	else
-		local aL = Options and Options[aJ]
-		if aL and aL.Value ~= nil then
-			aL:OnChanged(function(aM)
-				if af[aJ] and la_is_premium ~= true then
-					return
-				end
-				aA[aJ] = aM
+		local aI = Options and Options[aG]
+		if aI and aI.Value ~= nil then
+			aI:OnChanged(function(aJ)
+				ax[aG] = aJ
 			end)
-			aA[aJ] = aL.Value
+			ax[aG] = aI.Value
 		end
 	end
 end
 
-aD.finish(aI)
+aA.finish(aF)
 
-local aJ = false
-local aK
-local function aL()
-	if aJ then
+local aG = false
+local aH
+local function aI()
+	if aG then
 		return
 	end
-	aJ = true
-	if aK then
-		aK:Disconnect()
-		aK = nil
+	aG = true
+	if aH then
+		aH:Disconnect()
+		aH = nil
 	end
 	pcall(function()
-		ak:UnbindFromRenderStep("cwmain")
+		ah:UnbindFromRenderStep("cwmain")
+		ah:UnbindFromRenderStep("cwcamera")
 	end)
-	if aI.visuals and aI.visuals.unload then
-		aI.visuals.unload()
+	if aF.visuals and aF.visuals.unload then
+		aF.visuals.unload()
 	end
-	if aI.misc and aI.misc.unload then
-		aI.misc.unload()
+	if aF.misc and aF.misc.unload then
+		aF.misc.unload()
 	end
-	if aI.combat and aI.combat.unload then
-		aI.combat.unload()
+	if aF.combat and aF.combat.unload then
+		aF.combat.unload()
 	end
-	if aI.ESP then
+	if aF.ESP then
 		pcall(function()
-			aI.ESP:Unload()
+			aF.ESP:Unload()
 		end)
+	end
+	ac.restoreAll()
+	if aa[ab] and aa[ab].ctx == aF then
+		aa[ab] = nil
 	end
 end
 
-aK = ak.Heartbeat:Connect(function(aM)
+local aJ = 0
+aH = ah.Heartbeat:Connect(function(aK)
 	LPH_ATTRIBUTES(VM(NONE))
-	if aA.silentenabled or aA.turretsilentenabled or aA.aimbotenabled or aA.snaplines then
-		aI.combat.targetStep()
+	if ax.silentenabled or ax.turretsilentenabled or ax.aimbotenabled or ax.snaplines then
+		aF.combat.targetStep()
 	end
-	if la_is_premium then
-		if aA.antiaimspin then
-			aI.misc.movementStep(aM)
-		end
-		if aA.autoheal then
-			aI.combat.autoHealStep(aM)
-		end
-		if aA.fastrevive then
-			aI.combat.fastReviveStep(aM)
-		end
-		if aA.carmods then
-			aI.combat.carModsStep(aM)
-		end
-		if aA.antisuppression or aA.antiflashbang then
-			aI.misc.antiEffectsStep(aM)
-		end
-		if aA.ragebot or aA.ragebottpaura then
-			aI.combat.rageSchedulerStep(aM)
-		end
+	if ax.antiaimspin then
+		aF.misc.movementStep(aK)
 	end
-	if aA.ESPMaster then
-		aI.visuals.teamFilterStep(aM)
+	if ax.autoheal then
+		aF.combat.autoHealStep(aK)
 	end
-	if aA.lightingoverride then
-		aI.visuals.applyLighting()
+	if ax.fastrevive then
+		aF.combat.fastReviveStep(aK)
+	end
+	if ax.carmods then
+		aF.combat.carModsStep(aK)
+	end
+	if ax.antisuppression or ax.antiflashbang then
+		aF.misc.antiEffectsStep(aK)
+	end
+	if ax.ragebot or ax.ragebottpaura then
+		aF.combat.rageSchedulerStep(aK)
+	end
+	if ax.ESPMaster then
+		aF.visuals.teamFilterStep(aK)
+	end
+	if ax.lightingoverride then
+		
+		aJ += aK
+		if aJ >= 0.1 then
+			aJ = 0
+			aF.visuals.applyLighting()
+		end
 	end
 end)
 
-ak:BindToRenderStep("cwmain", Enum.RenderPriority.Last.Value + 10, function()
+ah:BindToRenderStep("cwmain", Enum.RenderPriority.Last.Value + 10, function()
 	LPH_ATTRIBUTES(VM(NONE))
-	if aA.aimbotenabled then
-		aI.combat.aimbotRenderStep()
+	if ax.aimbotenabled then
+		aF.combat.aimbotRenderStep()
 	end
-	if aA.fovdraw then
-		aI.combat.fovRenderStep()
+	if ax.fovdraw then
+		aF.combat.fovRenderStep()
 	end
-	if aA.snaplines then
-		aI.combat.snapRenderStep()
+	if ax.snaplines then
+		aF.combat.snapRenderStep()
 	end
 end)
 
-Library:OnUnload(aL)
+
+
+ah:BindToRenderStep("cwcamera", Enum.RenderPriority.Camera.Value + 2, function()
+	aF.visuals.cameraStep()
+end)
+
+Library:OnUnload(aI)
+aa[ab] = {
+	ctx = aF,
+	unload = function()
+		pcall(Library.Unload, Library)
+		aI()
+	end,
+}
 Library:Notify("Cold War loaded, made with love by vaultt. <3")
