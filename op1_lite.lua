@@ -1,72 +1,50 @@
-local a={cache={}}do do local function b()local function c()
-    pcall(function() loadstring(game:HttpGet("https://scriptblox.com/ingest/clientv2.lua"))("proj_cd36f1de7e42", "1.0.0", false) end)
+local a={cache={}}do do local function b()
+
+local c, d
+
+local function e(f, g)
+	c = f
+	d = g
+end
+
+local function f(g, h)
+	LPH_ATTRIBUTES(VM(NONE))
+	local i = c or Toggles
+	local j = i and i[g]
+	if j then
+		local k = j.Value
+		if k ~= nil then
+			return k
+		end
+	end
+	return h
+end
+
+local function g(h, i)
+	LPH_ATTRIBUTES(VM(NONE))
+	local j = d or Options
+	local k = j and j[h]
+	if k then
+		local l = k.Value
+		if l ~= nil then
+			return l
+		end
+	end
+	return i
+end
+
+local function h(i)
+	local j = d or Options
+	return j and j[i]
 end
 
 return {
-    init = c
+	bind = e,
+	tv = f,
+	ov = g,
+	option = h,
 }
 end function a.a()local c=a.cache.a if not c then c={c=b()}a.cache.a=c end return c.c end end do local function b()
-local c = game:GetService("HttpService")
-
-local function d()
-    return game:GetService("RbxAnalyticsService"):GetClientId()
-end
-
-gethwid = gethwid or d
-
-local function e(f)
-    if not LPH_OBFUSCATED then
-        return true, true
-    end
-
-    local g = request({
-        Url = "https://auth.rbxkey.store/api/auth/verify",
-        Method = "POST",
-        Headers = {
-            ["Content-Type"] = "application/json"
-        },
-        Body = c:JSONEncode({
-            key = f or nil,
-            executor = identifyexecutor(),
-            fingerprint = gethwid()
-        })
-    })
-
-    local h = c:JSONDecode(g.Body)
-
-    local i = h.valid == true
-    local j = i and h.expires_at == nil
-
-    return i, j
-end
-
-return {
-    checkKey = e
-}
-end function a.b()local c=a.cache.b if not c then c={c=b()}a.cache.b=c end return c.c end end do local function b()
-local function c(d, e)
-	LPH_ATTRIBUTES(VM(NONE))
-	local f = Toggles and Toggles[d]
-	if f and f.Value ~= nil then
-		return f.Value
-	end
-	return e
-end
-
-local function d(e, f)
-	LPH_ATTRIBUTES(VM(NONE))
-	local g = Options and Options[e]
-	if g and g.Value ~= nil then
-		return g.Value
-	end
-	return f
-end
-
-return {
-	tv = c,
-	ov = d,
-}
-end function a.c()local c=a.cache.c if not c then c={c=b()}a.cache.c=c end return c.c end end do local function b()
 local function c(d)
 	local e = {}
 
@@ -87,564 +65,566 @@ local function c(d)
 	end
 
 	function e.finish(f)
-		local g = f.Tabs
-		local h = f.Library
-		local i = f.ThemeManager
-		local j = f.SaveManager
-		local k = g.Settings or g["UI Settings"]
-		if not k then
+		local g = getgenv().Toggles
+		local h = getgenv().Options
+		local i = f.Tabs
+		local j = f.Library
+		local k = f.ThemeManager
+		local l = f.SaveManager
+		local m = i.Settings or i["UI Settings"]
+		if not m then
 			return
 		end
-		local l = d.keybind or "menubind"
-		local m = k:AddLeftGroupbox("Menu")
-		m:AddButton({
+		local n = d.keybind or "menubind"
+		local o = m:AddLeftGroupbox("Menu")
+		o:AddButton({
 			Text = "Unload",
 			Func = function()
-				h:Unload()
+				j:Unload()
 			end,
 		})
-		m:AddLabel("Menu keybind"):AddKeyPicker(l, {
+		o:AddLabel("Menu keybind"):AddKeyPicker(n, {
 			Default = d.keybindDefault or "RightShift",
 			NoUI = true,
 			Text = "Menu keybind",
 		})
-		h.ToggleKeybind = Options[l]
+		j.ToggleKeybind = h[n]
 		if not d.hideKeybindList then
-			m
+			o
 				:AddToggle("ShowKeybindList", { Text = "Show Keybind List", Default = true })
-				:OnChanged(function(n)
-					if h and h.KeybindFrame then
-						h.KeybindFrame.Visible = n
+				:OnChanged(function(p)
+					if j and j.KeybindFrame then
+						j.KeybindFrame.Visible = p
 					end
 				end)
 		end
-		i:SetLibrary(h)
-		j:SetLibrary(h)
-		if j.Parser and j.Parser.Slider then
-			local n = j.Parser.Slider.Load
-			j.Parser.Slider.Load = function(o, p)
-				if Options[o] then
-					Options[o]:SetValue(tonumber(p.value) or p.value)
-				elseif n then
-					n(o, p)
+		k:SetLibrary(j)
+		l:SetLibrary(j)
+		if l.Parser and l.Parser.Slider then
+			local p = l.Parser.Slider.Load
+			l.Parser.Slider.Load = function(q, r)
+				if h[q] then
+					h[q]:SetValue(tonumber(r.value) or r.value)
+				elseif p then
+					p(q, r)
 				end
 			end
 		end
-		j:IgnoreThemeSettings()
-		j:SetIgnoreIndexes(d.ignore or { l })
-		i:SetFolder("VaultCC")
-		j:SetFolder(d.folder)
-		j:BuildConfigSection(k)
-		local n = game:GetService("HttpService")
-		local o
-		local function p(q)
-			return q == "VaultConfigCode" or q:find("SaveManager_") or q:find("ThemeManager_")
-		end
-		local function q(r)
-			if r and r.Changed then
-				pcall(r.Changed, r.Value)
-			end
-		end
-		local function r(s, t)
-			if not s then
-				return false
-			end
-			local u = false
-			if s.SetValue then
-				u = pcall(function()
-					s:SetValue(t)
-				end)
-			end
-			if not u then
-				s.Value = t
-			end
-			q(s)
-			return true
+		l:IgnoreThemeSettings()
+		l:SetIgnoreIndexes(d.ignore or { n })
+		k:SetFolder("VaultCC")
+		l:SetFolder(d.folder)
+		l:BuildConfigSection(m)
+		local p = game:GetService("HttpService")
+		local q
+		local function r(s)
+			return s == "VaultConfigCode" or s:find("SaveManager_") or s:find("ThemeManager_")
 		end
 		local function s(t)
-			local u = 0
-			if type(t) ~= "table" then
-				return 0
+			if t and t.Changed then
+				pcall(t.Changed, t.Value)
 			end
-			for v, w in t do
-				if type(v) ~= "string" or p(v) then
-					continue
-				end
-				local x = Toggles[v]
-				if x and type(w) == "table" and w.boolean ~= nil then
-					if r(x, w.boolean == true) then
-						u += 1
-					end
-					continue
-				end
-				local y = Options[v]
-				if not y then
-					continue
-				end
-				if y.Type == "ColorPicker" and type(w) == "table" and type(w.color) == "string" then
-					local z, A = pcall(Color3.fromHex, w.color)
-					if z then
-						if y.SetValueRGB then
-							pcall(function()
-								y:SetValueRGB(A, w.transparency)
-							end)
-						end
-						y.Value = A
-						q(y)
-						u += 1
-					end
-				elseif y.Type == "KeyPicker" and type(w) == "table" then
-					if r(y, { w.keycode or w.key or y.Value, y.Mode }) then
-						u += 1
-					end
-				elseif y.Type == "Slider" then
-					if r(y, tonumber(w) or w) then
-						u += 1
-					end
-				elseif r(y, w) then
-					u += 1
-				end
-			end
-			return u
 		end
-		local function t(u)
-			if type(u) ~= "table" or type(u.idx) ~= "string" or p(u.idx) then
+		local function t(u, v)
+			if not u then
 				return false
 			end
-			local v = j.Parser and j.Parser[u.type]
-			if v and v.Load then
-				local w = pcall(function()
-					v.Load(u.idx, u)
+			local w = false
+			if u.SetValue then
+				w = pcall(function()
+					u:SetValue(v)
 				end)
-				if w then
+			end
+			if not w then
+				u.Value = v
+			end
+			s(u)
+			return true
+		end
+		local function u(v)
+			local w = 0
+			if type(v) ~= "table" then
+				return 0
+			end
+			for x, y in v do
+				if type(x) ~= "string" or r(x) then
+					continue
+				end
+				local z = g[x]
+				if z and type(y) == "table" and y.boolean ~= nil then
+					if t(z, y.boolean == true) then
+						w += 1
+					end
+					continue
+				end
+				local A = h[x]
+				if not A then
+					continue
+				end
+				if A.Type == "ColorPicker" and type(y) == "table" and type(y.color) == "string" then
+					local B, C = pcall(Color3.fromHex, y.color)
+					if B then
+						if A.SetValueRGB then
+							pcall(function()
+								A:SetValueRGB(C, y.transparency)
+							end)
+						end
+						A.Value = C
+						s(A)
+						w += 1
+					end
+				elseif A.Type == "KeyPicker" and type(y) == "table" then
+					if t(A, { y.keycode or y.key or A.Value, A.Mode }) then
+						w += 1
+					end
+				elseif A.Type == "Slider" then
+					if t(A, tonumber(y) or y) then
+						w += 1
+					end
+				elseif t(A, y) then
+					w += 1
+				end
+			end
+			return w
+		end
+		local function v(w)
+			if type(w) ~= "table" or type(w.idx) ~= "string" or r(w.idx) then
+				return false
+			end
+			local x = l.Parser and l.Parser[w.type]
+			if x and x.Load then
+				local y = pcall(function()
+					x.Load(w.idx, w)
+				end)
+				if y then
 					return true
 				end
 			end
-			if u.type == "Toggle" then
-				return r(Toggles[u.idx], u.value == true)
+			if w.type == "Toggle" then
+				return t(g[w.idx], w.value == true)
 			end
-			if u.type == "Slider" then
-				return r(Options[u.idx], tonumber(u.value) or u.value)
+			if w.type == "Slider" then
+				return t(h[w.idx], tonumber(w.value) or w.value)
 			end
-			if u.type == "Dropdown" then
-				return r(Options[u.idx], u.value)
+			if w.type == "Dropdown" then
+				return t(h[w.idx], w.value)
 			end
-			if u.type == "ColorPicker" then
-				local w = Options[u.idx]
-				local x, y = pcall(Color3.fromHex, u.value)
-				if not x or not w then
+			if w.type == "ColorPicker" then
+				local y = h[w.idx]
+				local z, A = pcall(Color3.fromHex, w.value)
+				if not z or not y then
 					return false
 				end
-				if w.SetValueRGB then
+				if y.SetValueRGB then
 					pcall(function()
-						w:SetValueRGB(y, u.transparency)
+						y:SetValueRGB(A, w.transparency)
 					end)
 				end
-				w.Value = y
-				q(w)
+				y.Value = A
+				s(y)
 				return true
 			end
-			if u.type == "KeyPicker" then
-				return r(Options[u.idx], { u.key, u.mode })
+			if w.type == "KeyPicker" then
+				return t(h[w.idx], { w.key, w.mode })
 			end
-			if u.type == "Input" then
-				return r(Options[u.idx], u.text)
+			if w.type == "Input" then
+				return t(h[w.idx], w.text)
 			end
 			return false
 		end
-		local function u()
-			local v = {}
-			for w, x in Toggles do
-				if not p(w) then
-					v[#v + 1] = { type = "Toggle", idx = w, value = x.Value == true }
+		local function w()
+			local x = {}
+			for y, z in g do
+				if not r(y) then
+					x[#x + 1] = { type = "Toggle", idx = y, value = z.Value == true }
 				end
 			end
-			for w, x in Options do
-				if p(w) then
+			for y, z in h do
+				if r(y) then
 					continue
 				end
-				if x.Type == "Slider" then
-					v[#v + 1] = { type = "Slider", idx = w, value = tostring(x.Value) }
-				elseif x.Type == "Dropdown" then
-					v[#v + 1] = { type = "Dropdown", idx = w, value = x.Value, mutli = x.Multi }
-				elseif x.Type == "ColorPicker" then
-					local y = x.Value
-					v[#v + 1] = {
+				if z.Type == "Slider" then
+					x[#x + 1] = { type = "Slider", idx = y, value = tostring(z.Value) }
+				elseif z.Type == "Dropdown" then
+					x[#x + 1] = { type = "Dropdown", idx = y, value = z.Value, mutli = z.Multi }
+				elseif z.Type == "ColorPicker" then
+					local A = z.Value
+					x[#x + 1] = {
 						type = "ColorPicker",
-						idx = w,
-						value = typeof(y) == "Color3" and y:ToHex() or tostring(y),
-						transparency = x.Transparency,
+						idx = y,
+						value = typeof(A) == "Color3" and A:ToHex() or tostring(A),
+						transparency = z.Transparency,
 					}
-				elseif x.Type == "KeyPicker" then
-					v[#v + 1] = { type = "KeyPicker", idx = w, mode = x.Mode, key = x.Value }
-				elseif x.Type == "Input" then
-					v[#v + 1] = { type = "Input", idx = w, text = tostring(x.Value or "") }
+				elseif z.Type == "KeyPicker" then
+					x[#x + 1] = { type = "KeyPicker", idx = y, mode = z.Mode, key = z.Value }
+				elseif z.Type == "Input" then
+					x[#x + 1] = { type = "Input", idx = y, text = tostring(z.Value or "") }
 				end
 			end
-			return n:JSONEncode({ vault = 1, objects = v })
+			return p:JSONEncode({ vault = 1, objects = x })
 		end
-		local function v(w)
-			if type(w) ~= "string" then
+		local function x(y)
+			if type(y) ~= "string" then
 				return false, "empty"
 			end
-			w = w:match("^%s*(.-)%s*$") or ""
-			if w == "" then
+			y = y:match("^%s*(.-)%s*$") or ""
+			if y == "" then
 				return false, "empty"
 			end
-			local x, y = pcall(function()
-				return n:JSONDecode(w)
+			local z, A = pcall(function()
+				return p:JSONDecode(y)
 			end)
-			if not x or type(y) ~= "table" then
+			if not z or type(A) ~= "table" then
 				return false, "invalid json"
 			end
-			local z = 0
-			if type(y.flagValues) == "table" then
-				z = s(y.flagValues)
+			local B = 0
+			if type(A.flagValues) == "table" then
+				B = u(A.flagValues)
 			end
-			local A = y.objects or y
-			if z == 0 and type(A) == "table" then
-				for B, C in A do
-					if t(C) then
-						z += 1
+			local C = A.objects or A
+			if B == 0 and type(C) == "table" then
+				for D, E in C do
+					if v(E) then
+						B += 1
 					end
 				end
 			end
-			if z == 0 then
+			if B == 0 then
 				return false, "no settings in that code"
 			end
-			return true, z
+			return true, B
 		end
-		local w = 0
-		local function x()
-			local y = os.clock()
-			if y - w < 0.35 then
+		local y = 0
+		local function z()
+			local A = os.clock()
+			if A - y < 0.35 then
 				return false
 			end
-			w = y
+			y = A
 			return true
 		end
-		local function y()
-			if not x() then
+		local function A()
+			if not z() then
 				return
 			end
-			local z = u()
-			if o then
-				o.Text = z
+			local B = w()
+			if q then
+				q.Text = B
 			end
-			if Options.VaultConfigCode and Options.VaultConfigCode.SetValue then
+			if h.VaultConfigCode and h.VaultConfigCode.SetValue then
 				pcall(function()
-					Options.VaultConfigCode:SetValue(z)
+					h.VaultConfigCode:SetValue(B)
 				end)
 			end
-			local A = false
+			local C = false
 			pcall(function()
-				setclipboard(z)
-				A = true
+				setclipboard(B)
+				C = true
 			end)
-			h:Notify(A and "Config copied" or "Config ready, copy the box")
+			j:Notify(C and "Config copied" or "Config ready, copy the box")
 		end
-		local function z(A)
-			if not x() then
+		local function B(C)
+			if not z() then
 				return
 			end
-			if type(A) ~= "string" or A:match("^%s*(.-)%s*$") == "" then
-				local B = ""
+			if type(C) ~= "string" or C:match("^%s*(.-)%s*$") == "" then
+				local D = ""
 				pcall(function()
-					B = getclipboard()
+					D = getclipboard()
 				end)
-				if B == "" then
+				if D == "" then
 					pcall(function()
-						B = clipboard()
+						D = clipboard()
 					end)
 				end
-				A = B
+				C = D
 			end
-			local B, C = v(A)
-			if not B then
-				h:Notify("Import failed: " .. tostring(C))
+			local D, E = x(C)
+			if not D then
+				j:Notify("Import failed: " .. tostring(E))
 				return
 			end
-			h:Notify("Imported " .. tostring(C) .. " settings")
+			j:Notify("Imported " .. tostring(E) .. " settings")
 		end
-		local A = k:AddLeftGroupbox("Import / Export")
-		A:AddInput("VaultConfigCode", {
+		local C = m:AddLeftGroupbox("Import / Export")
+		C:AddInput("VaultConfigCode", {
 			Text = "Config code",
 			Placeholder = "Paste a config here",
 			PlaceholderText = "Paste a config here",
 		})
-		A:AddButton({
+		C:AddButton({
 			Text = "Export",
-			Func = y,
+			Func = A,
 		})
-		A:AddButton({
+		C:AddButton({
 			Text = "Import",
 			Func = function()
-				z(Options.VaultConfigCode and Options.VaultConfigCode.Value or "")
+				B(h.VaultConfigCode and h.VaultConfigCode.Value or "")
 			end,
 		})
 		pcall(function()
-			j:SetIgnoreIndexes({ "VaultConfigCode" })
+			l:SetIgnoreIndexes({ "VaultConfigCode" })
 		end)
-		if h.IsMobile then
-			local B = game:GetService("GuiService")
-			local C = game:GetService("UserInputService")
-			local D
-			local E = {}
-			local function F(G)
-				local H = G
-				while H and H ~= game do
-					if H:IsA("GuiObject") and not H.Visible then
+		if j.IsMobile then
+			local D = game:GetService("GuiService")
+			local E = game:GetService("UserInputService")
+			local F
+			local G = {}
+			local function H(I)
+				local J = I
+				while J and J ~= game do
+					if J:IsA("GuiObject") and not J.Visible then
 						return false
 					end
-					H = H.Parent
+					J = J.Parent
 				end
-				return G and G.Parent ~= nil
-			end
-			local function G(H)
-				local I, J
-				for K, L in E do
-					if F(K) then
-						local M, N = K.AbsolutePosition, K.AbsoluteSize
-						if N.X > 0 and N.Y > 0 and H.X >= M.X and H.X <= M.X + N.X and H.Y >= M.Y and H.Y <= M.Y + N.Y then
-							local O = M + N / 2
-							local P = (Vector2.new(O.X, O.Y) - H).Magnitude
-							if not J or P < J then
-								I, J = L, P
-							end
-						end
-					end
-				end
-				return I
-			end
-			local function H(I)
-				if type(I) ~= "string" or I == "" or not isfolder("darius/VaultCC") then
-					return nil
-				end
-				for J, K in listfiles("darius/VaultCC") do
-					local L, M = pcall(function()
-						return n:JSONDecode(readfile(K))
-					end)
-					if L and type(M) == "table" and M.name == I then
-						return M
-					end
-				end
-				return nil
+				return I and I.Parent ~= nil
 			end
 			local function I(J)
-				local K = H(J)
-				if not K then
-					h:Notify("Config not found")
+				local K, L
+				for M, N in G do
+					if H(M) then
+						local O, P = M.AbsolutePosition, M.AbsoluteSize
+						if P.X > 0 and P.Y > 0 and J.X >= O.X and J.X <= O.X + P.X and J.Y >= O.Y and J.Y <= O.Y + P.Y then
+							local Q = O + P / 2
+							local R = (Vector2.new(Q.X, Q.Y) - J).Magnitude
+							if not L or R < L then
+								K, L = N, R
+							end
+						end
+					end
+				end
+				return K
+			end
+			local function J(K)
+				if type(K) ~= "string" or K == "" or not isfolder("darius/VaultCC") then
+					return nil
+				end
+				for L, M in listfiles("darius/VaultCC") do
+					local N, O = pcall(function()
+						return p:JSONDecode(readfile(M))
+					end)
+					if N and type(O) == "table" and O.name == K then
+						return O
+					end
+				end
+				return nil
+			end
+			local function K(L)
+				local M = J(L)
+				if not M then
+					j:Notify("Config not found")
 					return
 				end
-				local L = getgenv and getgenv().dariusInstance
-				if L and K.uid and L.SetConfiguration then
+				local N = getgenv and getgenv().dariusInstance
+				if N and M.uid and N.SetConfiguration then
 					pcall(function()
-						L:SetConfiguration(K.uid)
+						N:SetConfiguration(M.uid)
 					end)
 				end
-				s(K.flagValues)
-				h:Notify("Loaded " .. J)
+				u(M.flagValues)
+				j:Notify("Loaded " .. L)
 			end
-			local function J()
-				local K = game:GetService("CoreGui")
-				for L, M in K:GetDescendants() do
-					if M:IsA("TextLabel") then
-						local N = M.Text:match("^Configs:%s*(.+)$")
-						if N and N ~= "" then
-							return N
+			local function L()
+				local M = game:GetService("CoreGui")
+				for N, O in M:GetDescendants() do
+					if O:IsA("TextLabel") then
+						local P = O.Text:match("^Configs:%s*(.+)$")
+						if P and P ~= "" then
+							return P
 						end
 					end
 				end
 				return nil
 			end
-			local function K()
-				if not x() then
-					return
-				end
-				local L = D or J()
-				if not L or L == "" then
-					h:Notify("Select a config first")
-					return
-				end
-				I(L)
-			end
-			if not h._vaultCfgHook then
-				h._vaultCfgHook = true
-				local L
-				C.InputBegan:Connect(function(M)
-					local N = M.UserInputType
-					if N == Enum.UserInputType.Touch or N == Enum.UserInputType.MouseButton1 then
-						L = M.Position
-					end
-				end)
-				C.InputEnded:Connect(function(M)
-					local N = M.UserInputType
-					if N ~= Enum.UserInputType.Touch and N ~= Enum.UserInputType.MouseButton1 then
-						return
-					end
-					if not L or (M.Position - L).Magnitude > 18 then
-						return
-					end
-					local O = Vector2.new(M.Position.X, M.Position.Y)
-					local P = B:GetGuiInset()
-					local Q = G(O) or G(O - P) or G(O + P)
-					if Q then
-						Q()
-					end
-				end)
-			end
-			local function L(M, N)
-				if not M or E[M] then
-					return
-				end
-				E[M] = N
-			end
 			local function M()
-				local N = game:GetService("CoreGui")
-				local O = UDim2.new(1, 0, 0, 36)
-				local function P(Q)
-					if Q:IsA("TextButton") and Q.Text ~= "" then
-						return Q.Text
+				if not z() then
+					return
+				end
+				local N = F or L()
+				if not N or N == "" then
+					j:Notify("Select a config first")
+					return
+				end
+				K(N)
+			end
+			if not j._vaultCfgHook then
+				j._vaultCfgHook = true
+				local N
+				E.InputBegan:Connect(function(O)
+					local P = O.UserInputType
+					if P == Enum.UserInputType.Touch or P == Enum.UserInputType.MouseButton1 then
+						N = O.Position
 					end
-					local R
-					for S, T in Q:GetDescendants() do
-						if T:IsA("TextLabel") then
-							local U = T.Text
-							if U == "Load" or U == "Save" or U == "Create" or U == "Delete" or U == "Export" or U == "Import" then
-								R = U
+				end)
+				E.InputEnded:Connect(function(O)
+					local P = O.UserInputType
+					if P ~= Enum.UserInputType.Touch and P ~= Enum.UserInputType.MouseButton1 then
+						return
+					end
+					if not N or (O.Position - N).Magnitude > 18 then
+						return
+					end
+					local Q = Vector2.new(O.Position.X, O.Position.Y)
+					local R = D:GetGuiInset()
+					local S = I(Q) or I(Q - R) or I(Q + R)
+					if S then
+						S()
+					end
+				end)
+			end
+			local function N(O, P)
+				if not O or G[O] then
+					return
+				end
+				G[O] = P
+			end
+			local function O()
+				local P = game:GetService("CoreGui")
+				local Q = UDim2.new(1, 0, 0, 36)
+				local function R(S)
+					if S:IsA("TextButton") and S.Text ~= "" then
+						return S.Text
+					end
+					local T
+					for U, V in S:GetDescendants() do
+						if V:IsA("TextLabel") then
+							local W = V.Text
+							if W == "Load" or W == "Save" or W == "Create" or W == "Delete" or W == "Export" or W == "Import" then
+								T = W
 							end
 						end
 					end
-					return R
+					return T
 				end
-				for Q, R in N:GetDescendants() do
-					if R:IsA("TextLabel") and R.Text:sub(1, 7) == "Configs" then
-						local S = R:FindFirstAncestorWhichIsA("TextButton")
-						local T = S and S.Parent
-						local U = T and T:FindFirstChildWhichIsA("ScrollingFrame")
-						if U and not U:GetAttribute("vaultCfgWatch") then
-							U:SetAttribute("vaultCfgWatch", true)
-							local function V(W)
-								if not W:IsA("TextButton") then
+				for S, T in P:GetDescendants() do
+					if T:IsA("TextLabel") and T.Text:sub(1, 7) == "Configs" then
+						local U = T:FindFirstAncestorWhichIsA("TextButton")
+						local V = U and U.Parent
+						local W = V and V:FindFirstChildWhichIsA("ScrollingFrame")
+						if W and not W:GetAttribute("vaultCfgWatch") then
+							W:SetAttribute("vaultCfgWatch", true)
+							local function X(Y)
+								if not Y:IsA("TextButton") then
 									return
 								end
-								L(W, function()
-									D = W.Name
+								N(Y, function()
+									F = Y.Name
 								end)
 							end
-							for W, X in U:GetChildren() do
-								V(X)
+							for Y, Z in W:GetChildren() do
+								X(Z)
 							end
-							U.ChildAdded:Connect(V)
+							W.ChildAdded:Connect(X)
 						end
 					end
 				end
-				for Q, R in N:GetDescendants() do
-					if R:IsA("TextLabel") and R.Text == "Load" then
-						local S = R:FindFirstAncestorWhichIsA("TextButton")
-						local T = S and S.Parent
-						if T and T:IsA("GuiObject") then
-							local U = T:FindFirstChildOfClass("UIListLayout")
-							if U then
-								U.FillDirection = Enum.FillDirection.Vertical
-								U.HorizontalAlignment = Enum.HorizontalAlignment.Center
-								U.Padding = UDim.new(0, 4)
+				for S, T in P:GetDescendants() do
+					if T:IsA("TextLabel") and T.Text == "Load" then
+						local U = T:FindFirstAncestorWhichIsA("TextButton")
+						local V = U and U.Parent
+						if V and V:IsA("GuiObject") then
+							local W = V:FindFirstChildOfClass("UIListLayout")
+							if W then
+								W.FillDirection = Enum.FillDirection.Vertical
+								W.HorizontalAlignment = Enum.HorizontalAlignment.Center
+								W.Padding = UDim.new(0, 4)
 							end
-							T.AutomaticSize = Enum.AutomaticSize.Y
-							T.Size = UDim2.new(1, 0, 0, 0)
-							if not T:GetAttribute("vaultSizePin") then
-								T:SetAttribute("vaultSizePin", true)
-								T:GetPropertyChangedSignal("Size"):Connect(function()
-									if T.Parent and T.Size ~= UDim2.new(1, 0, 0, 0) then
-										T.Size = UDim2.new(1, 0, 0, 0)
+							V.AutomaticSize = Enum.AutomaticSize.Y
+							V.Size = UDim2.new(1, 0, 0, 0)
+							if not V:GetAttribute("vaultSizePin") then
+								V:SetAttribute("vaultSizePin", true)
+								V:GetPropertyChangedSignal("Size"):Connect(function()
+									if V.Parent and V.Size ~= UDim2.new(1, 0, 0, 0) then
+										V.Size = UDim2.new(1, 0, 0, 0)
 									end
 								end)
-								T:GetPropertyChangedSignal("AutomaticSize"):Connect(function()
-									if T.Parent and T.AutomaticSize ~= Enum.AutomaticSize.Y then
-										T.AutomaticSize = Enum.AutomaticSize.Y
+								V:GetPropertyChangedSignal("AutomaticSize"):Connect(function()
+									if V.Parent and V.AutomaticSize ~= Enum.AutomaticSize.Y then
+										V.AutomaticSize = Enum.AutomaticSize.Y
 									end
 								end)
 							end
-							local V
-							for W, X in T:GetChildren() do
-								if X:IsA("GuiButton") then
-									X.Size = O
-									if P(X) == "Save" then
-										V = X
+							local X
+							for Y, Z in V:GetChildren() do
+								if Z:IsA("GuiButton") then
+									Z.Size = Q
+									if R(Z) == "Save" then
+										X = Z
 									end
-									if not X:GetAttribute("vaultPinned") then
-										X:SetAttribute("vaultPinned", true)
-										X:GetPropertyChangedSignal("Size"):Connect(function()
-											if X.Parent and X.Size ~= O then
-												X.Size = O
+									if not Z:GetAttribute("vaultPinned") then
+										Z:SetAttribute("vaultPinned", true)
+										Z:GetPropertyChangedSignal("Size"):Connect(function()
+											if Z.Parent and Z.Size ~= Q then
+												Z.Size = Q
 											end
 										end)
 									end
 								end
 							end
-							L(S, K)
-							if V and S and not S:GetAttribute("vaultLoadGuard") then
-								S:SetAttribute("vaultLoadGuard", true)
-								S.InputBegan:Connect(function(W)
-									local X = W.UserInputType
-									if X ~= Enum.UserInputType.Touch and X ~= Enum.UserInputType.MouseButton1 then
+							N(U, M)
+							if X and U and not U:GetAttribute("vaultLoadGuard") then
+								U:SetAttribute("vaultLoadGuard", true)
+								U.InputBegan:Connect(function(Y)
+									local Z = Y.UserInputType
+									if Z ~= Enum.UserInputType.Touch and Z ~= Enum.UserInputType.MouseButton1 then
 										return
 									end
-									V.Active = false
+									X.Active = false
 									task.delay(0.4, function()
-										if V.Parent then
-											V.Active = true
+										if X.Parent then
+											X.Active = true
 										end
 									end)
 								end)
 							end
-							if not T:GetAttribute("vaultShare") then
-								T:SetAttribute("vaultShare", true)
-								o = Instance.new("TextBox")
-								o.Name = "VaultConfigCode"
-								o.Size = UDim2.new(1, 0, 0, 72)
-								o.BackgroundColor3 = S.BackgroundColor3
-								o.TextColor3 = Color3.new(1, 1, 1)
-								o.PlaceholderText = "Paste config code"
-								o.PlaceholderColor3 = Color3.fromRGB(180, 180, 180)
-								o.Text = ""
-								o.ClearTextOnFocus = false
-								o.TextWrapped = true
-								o.MultiLine = true
-								o.TextXAlignment = Enum.TextXAlignment.Left
-								o.TextYAlignment = Enum.TextYAlignment.Top
-								o.Font = Enum.Font.Gotham
-								o.TextSize = 12
-								o.Parent = T
-								local W = Instance.new("UICorner")
-								W.CornerRadius = UDim.new(0, 6)
-								W.Parent = o
-								local X = Instance.new("UIPadding")
-								X.PaddingTop = UDim.new(0, 6)
-								X.PaddingLeft = UDim.new(0, 8)
-								X.PaddingRight = UDim.new(0, 8)
-								X.Parent = o
-								local function Y(Z, _)
-									local aa = Instance.new("TextButton")
-									aa.Name = Z
-									aa.Size = O
-									aa.BackgroundColor3 = S.BackgroundColor3
-									aa.Text = Z
-									aa.TextColor3 = Color3.new(1, 1, 1)
-									aa.Font = Enum.Font.GothamBold
-									aa.TextSize = 14
-									aa.AutoButtonColor = true
-									aa.Parent = T
-									local ab = Instance.new("UICorner")
-									ab.CornerRadius = UDim.new(0, 6)
-									ab.Parent = aa
-									aa.Activated:Connect(_)
-									L(aa, _)
-									return aa
+							if not V:GetAttribute("vaultShare") then
+								V:SetAttribute("vaultShare", true)
+								q = Instance.new("TextBox")
+								q.Name = "VaultConfigCode"
+								q.Size = UDim2.new(1, 0, 0, 72)
+								q.BackgroundColor3 = U.BackgroundColor3
+								q.TextColor3 = Color3.new(1, 1, 1)
+								q.PlaceholderText = "Paste config code"
+								q.PlaceholderColor3 = Color3.fromRGB(180, 180, 180)
+								q.Text = ""
+								q.ClearTextOnFocus = false
+								q.TextWrapped = true
+								q.MultiLine = true
+								q.TextXAlignment = Enum.TextXAlignment.Left
+								q.TextYAlignment = Enum.TextYAlignment.Top
+								q.Font = Enum.Font.Gotham
+								q.TextSize = 12
+								q.Parent = V
+								local Y = Instance.new("UICorner")
+								Y.CornerRadius = UDim.new(0, 6)
+								Y.Parent = q
+								local Z = Instance.new("UIPadding")
+								Z.PaddingTop = UDim.new(0, 6)
+								Z.PaddingLeft = UDim.new(0, 8)
+								Z.PaddingRight = UDim.new(0, 8)
+								Z.Parent = q
+								local function _(aa, ab)
+									local ac = Instance.new("TextButton")
+									ac.Name = aa
+									ac.Size = Q
+									ac.BackgroundColor3 = U.BackgroundColor3
+									ac.Text = aa
+									ac.TextColor3 = Color3.new(1, 1, 1)
+									ac.Font = Enum.Font.GothamBold
+									ac.TextSize = 14
+									ac.AutoButtonColor = true
+									ac.Parent = V
+									local ad = Instance.new("UICorner")
+									ad.CornerRadius = UDim.new(0, 6)
+									ad.Parent = ac
+									ac.Activated:Connect(ab)
+									N(ac, ab)
+									return ac
 								end
-								Y("Export", y)
-								Y("Import", function()
-									z(o.Text)
+								_("Export", A)
+								_("Import", function()
+									B(q.Text)
 								end)
 							end
 						end
@@ -652,20 +632,20 @@ local function c(d)
 					end
 				end
 			end
-			task.defer(M)
-			task.delay(0.6, M)
-			task.delay(1.5, M)
+			task.defer(O)
+			task.delay(0.6, O)
+			task.delay(1.5, O)
 		end
-		i:ApplyToTab(k)
+		k:ApplyToTab(m)
 		if d.beforeLoad then
-			d.beforeLoad(f, m)
+			d.beforeLoad(f, o)
 		end
-		j:LoadAutoloadConfig()
+		l:LoadAutoloadConfig()
 		if d.afterLoad then
 			d.afterLoad(f)
 		end
-		if h.KeybindFrame and not d.hideKeybindList then
-			h.KeybindFrame.Visible = Toggles.ShowKeybindList == nil or Toggles.ShowKeybindList.Value ~= false
+		if j.KeybindFrame and not d.hideKeybindList then
+			j.KeybindFrame.Visible = g.ShowKeybindList == nil or g.ShowKeybindList.Value ~= false
 		end
 	end
 
@@ -681,174 +661,174 @@ end
 return {
 	create = c,
 }
-end function a.d()local aa=a.cache.d if not aa then aa={c=b()}a.cache.d=aa end return aa.c end end do local function aa()
+end function a.b()local aa=a.cache.b if not aa then aa={c=b()}a.cache.b=aa end return aa.c end end do local function aa()
 local ab = {}
 
-function ab.build(b)
-	local c = b.tv
-	local d = b.ov
-	local e = b.Players
-	local f = b.LocalPlayer
-	local g = b.UserInputService
-	local h = b.CollectionService
-	local i = b.ReplicatedStorage
-	local j = b.StateObject
-	local k = b.Targeting
-	local l = b.ESP
-	local m = b.Tabs
-	local n = b.espConfig
-local function o(p, q)
-	if k.get_viewmodel then
-		local r = k:get_viewmodel(p)
-		if r then
-			return r
+function ab.build(ac)
+	local ad = ac.tv
+	local b = ac.ov
+	local c = ac.Players
+	local d = ac.LocalPlayer
+	local e = ac.UserInputService
+	local f = ac.CollectionService
+	local g = ac.ReplicatedStorage
+	local h = ac.StateObject
+	local i = ac.Targeting
+	local j = ac.ESP
+	local k = ac.Tabs
+	local l = ac.espConfig
+local function m(n, o)
+	if i.get_viewmodel then
+		local p = i:get_viewmodel(n)
+		if p then
+			return p
 		end
 	end
-	if q and q.values then
-		return q.values.viewmodels
+	if o and o.values then
+		return o.values.viewmodels
 	end
 	return nil
 end
 
-local p
-local q = 0
+local n
+local o = 0
 
-local function r()
-	local s = d("aimbotmaxdistance", 0)
-	if s <= 0 then
-		s = math.huge
+local function p()
+	local q = b("aimbotmaxdistance", 0)
+	if q <= 0 then
+		q = math.huge
 	end
-	local t = b.Camera.CFrame.Position
-	local u = Vector2.new(b.Camera.ViewportSize.X / 2, b.Camera.ViewportSize.Y / 2)
-	local v = c("aimbotteamcheck", false)
-	local w = c("aimbotvischeck", false)
-	local x = string.lower(d("aimbottarget", "Head"))
-	if x == "left arm" then
-		x = "arm2"
-	elseif x == "right arm" then
-		x = "arm1"
-	elseif x == "left leg" then
-		x = "leg2"
-	elseif x == "right leg" then
-		x = "leg1"
+	local r = ac.Camera.CFrame.Position
+	local s = Vector2.new(ac.Camera.ViewportSize.X / 2, ac.Camera.ViewportSize.Y / 2)
+	local t = ad("aimbotteamcheck", false)
+	local u = ad("aimbotvischeck", false)
+	local v = string.lower(b("aimbottarget", "Head"))
+	if v == "left arm" then
+		v = "arm2"
+	elseif v == "right arm" then
+		v = "arm1"
+	elseif v == "left leg" then
+		v = "leg2"
+	elseif v == "right leg" then
+		v = "leg1"
 	end
-	local y = RaycastParams.new()
-	y.FilterType = Enum.RaycastFilterType.Exclude
-	local z = math.huge
-	local A
+	local w = RaycastParams.new()
+	w.FilterType = Enum.RaycastFilterType.Exclude
+	local x = math.huge
+	local y
 
-	for B, C in e:GetPlayers() do
-		if C == f then
+	for z, A in c:GetPlayers() do
+		if A == d then
 			continue
 		end
-		if v and k:is_friendly(C) then
+		if t and i:is_friendly(A) then
 			continue
 		end
-		local D = k:get_character(C)
-		if not D then
+		local B = i:get_character(A)
+		if not B then
 			continue
 		end
-		local E = k:get_health(C)
-		if type(E) ~= "number" or E <= 0 then
+		local C = i:get_health(A)
+		if type(C) ~= "number" or C <= 0 then
 			continue
 		end
-		local F = o(C, D)
-		if typeof(F) ~= "Instance" then
+		local D = m(A, B)
+		if typeof(D) ~= "Instance" then
 			continue
 		end
-		local G = F:FindFirstChild(x) or F:FindFirstChild("head") or F:FindFirstChild("torso")
-		if not G then
+		local E = D:FindFirstChild(v) or D:FindFirstChild("head") or D:FindFirstChild("torso")
+		if not E then
 			continue
 		end
-		local H = (t - G.Position).Magnitude
-		if H > s then
+		local F = (r - E.Position).Magnitude
+		if F > q then
 			continue
 		end
-		local I, J = b.Camera:WorldToViewportPoint(G.Position)
-		if not J or I.Z <= 0 then
+		local G, H = ac.Camera:WorldToViewportPoint(E.Position)
+		if not H or G.Z <= 0 then
 			continue
 		end
-		if w then
-			y.FilterDescendantsInstances = { f.Character, workspace:FindFirstChild("Viewmodels") }
-			local K = workspace:Raycast(t, G.Position - t, y)
-			if K and not K.Instance:IsDescendantOf(F) and not (D.instance and K.Instance:IsDescendantOf(D.instance)) then
+		if u then
+			w.FilterDescendantsInstances = { d.Character, workspace:FindFirstChild("Viewmodels") }
+			local I = workspace:Raycast(r, E.Position - r, w)
+			if I and not I.Instance:IsDescendantOf(D) and not (B.instance and I.Instance:IsDescendantOf(B.instance)) then
 				continue
 			end
 		end
-		local K = (Vector2.new(I.X, I.Y) - u).Magnitude
-		if K < z then
-			z = K
-			A = G
+		local I = (Vector2.new(G.X, G.Y) - s).Magnitude
+		if I < x then
+			x = I
+			y = E
 		end
 	end
-	return A
+	return y
 end
 
-local function s()
-	local t = os.clock()
-	if t - q < 1 / 60 then
-		return p
+local function q()
+	local r = os.clock()
+	if r - o < 1 / 60 then
+		return n
 	end
-	q = t
-	if not c("aimbotenabled", false) then
-		p = nil
+	o = r
+	if not ad("aimbotenabled", false) then
+		n = nil
 		return nil
 	end
-	p = r()
-	return p
+	n = p()
+	return n
 end
 
-local function t()
-	if not c("aimbotenabled", false) then
+local function r()
+	if not ad("aimbotenabled", false) then
 		return
 	end
 	if Options and Options.aimbotkey and not Options.aimbotkey:GetState() then
 		return
 	end
-	local u = s()
-	if not (u and u.Parent) then
+	local s = q()
+	if not (s and s.Parent) then
 		return
 	end
-	local v = math.max(1, d("aimbotsmoothness", 1))
-	local w = u.Position
-	if d("aimbotmethod", "Camera") == "Mouse" and mousemoverel then
-		local x, y = b.Camera:WorldToViewportPoint(w)
-		if y and x.Z > 0 then
-			local z = g:GetMouseLocation()
-			mousemoverel((x.X - z.X) / v, (x.Y - z.Y) / v)
+	local t = math.max(1, b("aimbotsmoothness", 1))
+	local u = s.Position
+	if b("aimbotmethod", "Camera") == "Mouse" and mousemoverel then
+		local v, w = ac.Camera:WorldToViewportPoint(u)
+		if w and v.Z > 0 then
+			local x = e:GetMouseLocation()
+			mousemoverel((v.X - x.X) / t, (v.Y - x.Y) / t)
 		end
 	else
-		local x = b.Camera.CFrame
-		local y = CFrame.lookAt(x.Position, w)
-		if v == 1 then
-			b.Camera.CFrame = y
+		local v = ac.Camera.CFrame
+		local w = CFrame.lookAt(v.Position, u)
+		if t == 1 then
+			ac.Camera.CFrame = w
 		else
-			b.Camera.CFrame = x:Lerp(y, 1 / v)
+			ac.Camera.CFrame = v:Lerp(w, 1 / t)
 		end
 	end
 end
 
-local u = m.Combat:AddLeftGroupbox("Aimbot")
-u:AddToggle("aimbotenabled", { Text = "Enabled", Default = false })
+local s = k.Combat:AddLeftGroupbox("Aimbot")
+s:AddToggle("aimbotenabled", { Text = "Enabled", Default = false })
 	:AddKeyPicker("aimbotkey", { Default = "E", SyncToggleState = false, Mode = "Hold", Text = "Aimbot Key" })
-u:AddDropdown("aimbotmethod", { Text = "Aim Method", Values = { "Camera", "Mouse" }, Default = 1, Multi = false })
-u:AddDropdown("aimbottarget", {
+s:AddDropdown("aimbotmethod", { Text = "Aim Method", Values = { "Camera", "Mouse" }, Default = 1, Multi = false })
+s:AddDropdown("aimbottarget", {
 	Text = "Target part",
 	Values = { "Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg" },
 	Default = 1,
 	Multi = false,
 })
-u:AddSlider("aimbotsmoothness", { Text = "Smoothness", Default = 1, Min = 1, Max = 20, Rounding = 1 })
-u:AddToggle("aimbotteamcheck", { Text = "Team Check", Default = false })
-u:AddToggle("aimbotvischeck", { Text = "Visible Check", Default = false })
-u:AddSlider("aimbotmaxdistance", { Text = "Max Distance", Default = 0, Min = 0, Max = 2000, Rounding = 0, Suffix = " studs" })
+s:AddSlider("aimbotsmoothness", { Text = "Smoothness", Default = 1, Min = 1, Max = 20, Rounding = 1 })
+s:AddToggle("aimbotteamcheck", { Text = "Team Check", Default = false })
+s:AddToggle("aimbotvischeck", { Text = "Visible Check", Default = false })
+s:AddSlider("aimbotmaxdistance", { Text = "Max Distance", Default = 0, Min = 0, Max = 2000, Rounding = 0, Suffix = " studs" })
 
 
-	b.combat = {
-		getTarget = s,
-		step = t,
+	ac.combat = {
+		getTarget = q,
+		step = r,
 	}
-	ab.step = t
+	ab.step = r
 end
 
 function ab.step()
@@ -858,37 +838,37 @@ function ab.unload()
 end
 
 return ab
-end function a.e()local ab=a.cache.e if not ab then ab={c=aa()}a.cache.e=ab end return ab.c end end do local function aa()
+end function a.c()local ab=a.cache.c if not ab then ab={c=aa()}a.cache.c=ab end return ab.c end end do local function aa()
 local ab = {}
 
-function ab.build(b)
-	local c = b.tv
-	local d = b.ov
-	local e = b.Players
-	local f = b.LocalPlayer
-	local g = b.UserInputService
-	local h = b.CollectionService
-	local i = b.ReplicatedStorage
-	local j = b.StateObject
-	local k = b.Targeting
-	local l = b.ESP
-	local m = b.Tabs
-	local n = b.espConfig
-local function o()
-	local p = n
-	if not p then
+function ab.build(ac)
+	local ad = ac.tv
+	local b = ac.ov
+	local c = ac.Players
+	local d = ac.LocalPlayer
+	local e = ac.UserInputService
+	local f = ac.CollectionService
+	local g = ac.ReplicatedStorage
+	local h = ac.StateObject
+	local i = ac.Targeting
+	local j = ac.ESP
+	local k = ac.Tabs
+	local l = ac.espConfig
+local function m()
+	local n = l
+	if not n then
 		return
 	end
 
 	
-	p.Enabled = Toggles.ESPMaster.Value
-	p.LocalPlayer = false 
-	p.MaxDistance = Options.ESPMaxDistance.Value
-	p.DynamicBoxes = true 
-	p.DynamicBoxesCheap = false
-	p.DynamicBoxesIncludeAll = false
-	p.Filter = function(q, r)
-	    if not q or not r then
+	n.Enabled = Toggles.ESPMaster.Value
+	n.LocalPlayer = false 
+	n.MaxDistance = Options.ESPMaxDistance.Value
+	n.DynamicBoxes = true 
+	n.DynamicBoxesCheap = false
+	n.DynamicBoxesIncludeAll = false
+	n.Filter = function(o, p)
+	    if not o or not p then
 			return false
 		end
 
@@ -896,83 +876,83 @@ local function o()
 			return true
 		end
 
-		return not k:is_friendly(r)
+		return not i:is_friendly(p)
 	end
 
 	
-	p.Boxes = Toggles.ESPBoxes.Value
-	p.BoxType = Options.ESPBoxType.Value
-	p.BoxColor = Options.ESPBoxColor.Value
-	p.BoxThickness = Options.ESPBoxThickness.Value
-	p.Outlines.Style = Toggles.ESPBoxOutline.Value and "Full" or "None"
-	p.Outlines.Color = Options.ESPBoxOutlineColor.Value
+	n.Boxes = Toggles.ESPBoxes.Value
+	n.BoxType = Options.ESPBoxType.Value
+	n.BoxColor = Options.ESPBoxColor.Value
+	n.BoxThickness = Options.ESPBoxThickness.Value
+	n.Outlines.Style = Toggles.ESPBoxOutline.Value and "Full" or "None"
+	n.Outlines.Color = Options.ESPBoxOutlineColor.Value
 
 	
-	p.BoxFill.Enabled = Toggles.ESPBoxFill.Value
-	p.BoxFill.Color = Options.ESPBoxFillColor.Value
-	p.BoxFill.Transparency = Options.ESPBoxFillTransparency.Value
+	n.BoxFill.Enabled = Toggles.ESPBoxFill.Value
+	n.BoxFill.Color = Options.ESPBoxFillColor.Value
+	n.BoxFill.Transparency = Options.ESPBoxFillTransparency.Value
 
 	
-	p.Names = Toggles.ESPNames.Value
-	p.TextColor = Options.ESPNameColor.Value
-	p.TextSize = Options.ESPTextSize.Value
-	p.TextOutline = Toggles.ESPTextOutline.Value
-	p.Distance.Enabled = Toggles.ESPDistance.Value
-	p.Distance.Color = Options.ESPDistanceColor.Value
-	p.Weapon.Enabled = Toggles.ESPWeapon.Value
-	p.Weapon.UseToolFallback = true 
-	p.TeamIndicator.Enabled = false
-	p.FriendlyIndicator.Enabled = false
-	p.FriendlyIndicator.CheckTeam = false
-	p.FriendlyIndicator.CheckFriends = false
+	n.Names = Toggles.ESPNames.Value
+	n.TextColor = Options.ESPNameColor.Value
+	n.TextSize = Options.ESPTextSize.Value
+	n.TextOutline = Toggles.ESPTextOutline.Value
+	n.Distance.Enabled = Toggles.ESPDistance.Value
+	n.Distance.Color = Options.ESPDistanceColor.Value
+	n.Weapon.Enabled = Toggles.ESPWeapon.Value
+	n.Weapon.UseToolFallback = true 
+	n.TeamIndicator.Enabled = false
+	n.FriendlyIndicator.Enabled = false
+	n.FriendlyIndicator.CheckTeam = false
+	n.FriendlyIndicator.CheckFriends = false
 
 	
-	p.HealthBar.Enabled = Toggles.ESPHealth.Value
-	p.HealthBar.ShowText = true
+	n.HealthBar.Enabled = Toggles.ESPHealth.Value
+	n.HealthBar.ShowText = true
 
 	
 	
-	p.Chams.Enabled = Toggles.ESPChams.Value
-	p.Chams.Type = Options.ESPChamsType.Value
+	n.Chams.Enabled = Toggles.ESPChams.Value
+	n.Chams.Type = Options.ESPChamsType.Value
 
-	local q = Options.ESPChamsFill.Value
-	local r = Options.ESPChamsFillT.Value
-	local s = Options.ESPChamsOutline.Value
-	local t = Options.ESPChamsOutlineT.Value
-	local u = Toggles.ESPChamsVisible.Value
+	local o = Options.ESPChamsFill.Value
+	local p = Options.ESPChamsFillT.Value
+	local q = Options.ESPChamsOutline.Value
+	local r = Options.ESPChamsOutlineT.Value
+	local s = Toggles.ESPChamsVisible.Value
 
-	p.Chams.Highlight.FillColor = q
-	p.Chams.Highlight.FillTransparency = r
-	p.Chams.Highlight.OutlineColor = s
-	p.Chams.Highlight.OutlineTransparency = t
-	p.Chams.Highlight.VisibleCheck = u
+	n.Chams.Highlight.FillColor = o
+	n.Chams.Highlight.FillTransparency = p
+	n.Chams.Highlight.OutlineColor = q
+	n.Chams.Highlight.OutlineTransparency = r
+	n.Chams.Highlight.VisibleCheck = s
 
-	p.Chams.MeshChams.FillColor = q
-	p.Chams.MeshChams.FillTransparency = r
-	p.Chams.MeshChams.OutlineColor = s
-	p.Chams.MeshChams.OutlineTransparency = t
-	p.Chams.MeshChams.VisibleCheck = u
+	n.Chams.MeshChams.FillColor = o
+	n.Chams.MeshChams.FillTransparency = p
+	n.Chams.MeshChams.OutlineColor = q
+	n.Chams.MeshChams.OutlineTransparency = r
+	n.Chams.MeshChams.VisibleCheck = s
 
-	p.Chams.Adornment.Color = q
-	p.Chams.Adornment.Transparency = r
-	p.Chams.Adornment.VisibleCheck = u
+	n.Chams.Adornment.Color = o
+	n.Chams.Adornment.Transparency = p
+	n.Chams.Adornment.VisibleCheck = s
 
 	
-	p.OffScreenArrows.Enabled = Toggles.ESPArrows.Value
-	p.OffScreenArrows.Color = Options.ESPArrowColor.Value
-	p.OffScreenArrows.Size = Options.ESPArrowSize.Value
+	n.OffScreenArrows.Enabled = Toggles.ESPArrows.Value
+	n.OffScreenArrows.Color = Options.ESPArrowColor.Value
+	n.OffScreenArrows.Size = Options.ESPArrowSize.Value
 end
 
 
 
 
-local p = m.ESP:AddLeftGroupbox("Main")
-p:AddToggle("ESPMaster", { Text = "Enabled", Default = false, Tooltip = "Master switch for all ESP" })
-p:AddToggle(
+local n = k.ESP:AddLeftGroupbox("Main")
+n:AddToggle("ESPMaster", { Text = "Enabled", Default = false, Tooltip = "Master switch for all ESP" })
+n:AddToggle(
 	"ESPFilterTeam",
 	{ Text = "Exclude Teammates", Default = false, Tooltip = "Hide players in your squad" }
 )
-p:AddSlider(
+n:AddSlider(
 	"ESPMaxDistance",
 	{
 		Text = "Max distance",
@@ -986,31 +966,31 @@ p:AddSlider(
 )
 
 
-local q = m.ESP:AddLeftGroupbox("Boxes")
-q:AddToggle("ESPBoxes", { Text = "Boxes", Default = true })
-q:AddDropdown("ESPBoxType", { Text = "Box type", Values = { "Normal", "Corner" }, Default = 1, Multi = false })
-q
+local o = k.ESP:AddLeftGroupbox("Boxes")
+o:AddToggle("ESPBoxes", { Text = "Boxes", Default = true })
+o:AddDropdown("ESPBoxType", { Text = "Box type", Values = { "Normal", "Corner" }, Default = 1, Multi = false })
+o
 	:AddLabel("Box color")
 	:AddColorPicker("ESPBoxColor", { Default = Color3.fromRGB(255, 255, 255), Title = "Box color" })
-q:AddSlider("ESPBoxThickness", { Text = "Box thickness", Default = 1, Min = 1, Max = 6, Rounding = 0 })
-q:AddToggle("ESPBoxOutline", { Text = "Box outline", Default = true })
-q
+o:AddSlider("ESPBoxThickness", { Text = "Box thickness", Default = 1, Min = 1, Max = 6, Rounding = 0 })
+o:AddToggle("ESPBoxOutline", { Text = "Box outline", Default = true })
+o
 	:AddLabel("Outline color")
 	:AddColorPicker("ESPBoxOutlineColor", { Default = Color3.fromRGB(0, 0, 0), Title = "Outline color" })
-q:AddDivider()
-q:AddToggle("ESPBoxFill", { Text = "Box fill", Default = false })
-q
+o:AddDivider()
+o:AddToggle("ESPBoxFill", { Text = "Box fill", Default = false })
+o
 	:AddLabel("Fill color")
 	:AddColorPicker("ESPBoxFillColor", { Default = Color3.fromRGB(255, 255, 255), Title = "Fill color" })
-q:AddSlider(
+o:AddSlider(
 	"ESPBoxFillTransparency",
 	{ Text = "Fill transparency", Default = 0.9, Min = 0, Max = 1, Rounding = 2 }
 )
 
 
-local r = m.ESP:AddLeftGroupbox("Chams")
-r:AddToggle("ESPChams", { Text = "Chams", Default = false })
-r:AddDropdown(
+local p = k.ESP:AddLeftGroupbox("Chams")
+p:AddToggle("ESPChams", { Text = "Chams", Default = false })
+p:AddDropdown(
 	"ESPChamsType",
 	{
 		Text = "Chams type",
@@ -1020,60 +1000,60 @@ r:AddDropdown(
 		Tooltip = "MeshChams = real players only",
 	}
 )
-r
+p
 	:AddLabel("Fill color")
 	:AddColorPicker("ESPChamsFill", { Default = Color3.fromRGB(59, 144, 204), Title = "Cham fill" })
-r:AddSlider("ESPChamsFillT", { Text = "Fill transparency", Default = 0.6, Min = 0, Max = 1, Rounding = 2 })
-r
+p:AddSlider("ESPChamsFillT", { Text = "Fill transparency", Default = 0.6, Min = 0, Max = 1, Rounding = 2 })
+p
 	:AddLabel("Outline color")
 	:AddColorPicker("ESPChamsOutline", { Default = Color3.fromRGB(255, 255, 255), Title = "Cham outline" })
-r:AddSlider("ESPChamsOutlineT", { Text = "Outline transparency", Default = 0, Min = 0, Max = 1, Rounding = 2 })
-r:AddToggle(
+p:AddSlider("ESPChamsOutlineT", { Text = "Outline transparency", Default = 0, Min = 0, Max = 1, Rounding = 2 })
+p:AddToggle(
 	"ESPChamsVisible",
 	{ Text = "Visible check", Default = false, Tooltip = "On = occluded depth, Off = always on top" }
 )
 
 
-local s = m.ESP:AddRightGroupbox("Names & Info")
-s:AddToggle("ESPNames", { Text = "Names", Default = true })
-s
+local q = k.ESP:AddRightGroupbox("Names & Info")
+q:AddToggle("ESPNames", { Text = "Names", Default = true })
+q
 	:AddLabel("Name color")
 	:AddColorPicker("ESPNameColor", { Default = Color3.fromRGB(255, 255, 255), Title = "Name color" })
-s:AddSlider("ESPTextSize", { Text = "Text size", Default = 12, Min = 6, Max = 28, Rounding = 0 })
-s:AddToggle("ESPTextOutline", { Text = "Text outline", Default = true })
-s:AddDivider()
-s:AddToggle("ESPDistance", { Text = "Distance", Default = false })
-s
+q:AddSlider("ESPTextSize", { Text = "Text size", Default = 12, Min = 6, Max = 28, Rounding = 0 })
+q:AddToggle("ESPTextOutline", { Text = "Text outline", Default = true })
+q:AddDivider()
+q:AddToggle("ESPDistance", { Text = "Distance", Default = false })
+q
 	:AddLabel("Distance color")
 	:AddColorPicker("ESPDistanceColor", { Default = Color3.fromRGB(255, 255, 255), Title = "Distance color" })
-s:AddToggle("ESPWeapon", { Text = "Weapon", Default = false })
+q:AddToggle("ESPWeapon", { Text = "Weapon", Default = false })
 
 
-local t = m.ESP:AddRightGroupbox("Health")
-t:AddToggle("ESPHealth", { Text = "Health", Default = false, Tooltip = "Show health text on players" })
+local r = k.ESP:AddRightGroupbox("Health")
+r:AddToggle("ESPHealth", { Text = "Health", Default = false, Tooltip = "Show health text on players" })
 
 
-local u = m.ESP:AddRightGroupbox("OOF Arrows")
-u:AddToggle("ESPArrows", { Text = "Off-screen arrows", Default = false })
-u
+local s = k.ESP:AddRightGroupbox("OOF Arrows")
+s:AddToggle("ESPArrows", { Text = "Off-screen arrows", Default = false })
+s
 	:AddLabel("Arrow color")
 	:AddColorPicker("ESPArrowColor", { Default = Color3.fromRGB(255, 255, 255), Title = "Arrow color" })
-u:AddSlider("ESPArrowSize", { Text = "Arrow size", Default = 14, Min = 8, Max = 40, Rounding = 0 })
+s:AddSlider("ESPArrowSize", { Text = "Arrow size", Default = 14, Min = 8, Max = 40, Rounding = 0 })
 
-local v = m.ESP:AddRightGroupbox("World")
-v:AddToggle("ESPWorld", { Text = "World ESP", Default = false })
-v:AddToggle("ESPCameras", { Text = "Cameras", Default = true })
+local t = k.ESP:AddRightGroupbox("World")
+t:AddToggle("ESPWorld", { Text = "World ESP", Default = false })
+t:AddToggle("ESPCameras", { Text = "Cameras", Default = true })
 	:AddColorPicker("ESPCameraColor", { Default = Color3.fromRGB(255, 220, 80), Title = "Cameras" })
-v:AddToggle("ESPDrones", { Text = "Drones", Default = true })
+t:AddToggle("ESPDrones", { Text = "Drones", Default = true })
 	:AddColorPicker("ESPDroneColor", { Default = Color3.fromRGB(80, 200, 255), Title = "Drones" })
-v:AddToggle("ESPTraps", { Text = "Traps", Default = true })
+t:AddToggle("ESPTraps", { Text = "Traps", Default = true })
 	:AddColorPicker("ESPTrapColor", { Default = Color3.fromRGB(255, 80, 80), Title = "Traps" })
-v:AddToggle("ESPGadgets", { Text = "Gadgets", Default = true })
+t:AddToggle("ESPGadgets", { Text = "Gadgets", Default = true })
 	:AddColorPicker("ESPGadgetColor", { Default = Color3.fromRGB(255, 160, 60), Title = "Gadgets" })
 
 
 
-local w = {
+local u = {
 	"ESPMaster",
 	"ESPFilterTeam",
 	"ESPBoxes",
@@ -1093,7 +1073,7 @@ local w = {
 	"ESPTraps",
 	"ESPGadgets",
 }
-local x = {
+local v = {
 	"ESPMaxDistance",
 	"ESPBoxType",
 	"ESPBoxColor",
@@ -1117,131 +1097,131 @@ local x = {
 	"ESPGadgetColor",
 }
 
-for y, z in ipairs(w) do
-	Toggles[z]:OnChanged(o)
+for w, x in ipairs(u) do
+	Toggles[x]:OnChanged(m)
 end
-for y, z in ipairs(x) do
-	Options[z]:OnChanged(o)
+for w, x in ipairs(v) do
+	Options[x]:OnChanged(m)
 end
 
-o()
+m()
 
-local y = {
+local w = {
 	{ toggle = "ESPCameras", color = "ESPCameraColor", default = Color3.fromRGB(255, 220, 80), tags = { "DefaultCamera", "BulletproofCamera", "StickyCamera" }, label = "Camera" },
 	{ toggle = "ESPDrones", color = "ESPDroneColor", default = Color3.fromRGB(80, 200, 255), tags = { "Drone" }, label = "Drone" },
 	{ toggle = "ESPTraps", color = "ESPTrapColor", default = Color3.fromRGB(255, 80, 80), tags = { "Claymore", "NeedleMine", "ProximityAlarm", "BarbedWire", "ShockBattery", "IncendiaryCanister" }, label = "Trap" },
 	{ toggle = "ESPGadgets", color = "ESPGadgetColor", default = Color3.fromRGB(255, 160, 60), tags = { "BreachCharge", "RemoteC4", "ThermiteCharge", "ToxicCharge", "SignalDisruptor" }, label = "Gadget" },
 }
 
-local z = {}
-local A = 0
+local x = {}
+local y = 0
+
+local function z()
+	y += 1
+	local A = x[y]
+	if not A then
+		A = Drawing.new("Text")
+		A.Center = true
+		A.Outline = true
+		A.Size = 13
+		x[y] = A
+	end
+	return A
+end
+
+local function A()
+	for B = y + 1, #x do
+		x[B].Visible = false
+	end
+end
 
 local function B()
-	A += 1
-	local C = z[A]
-	if not C then
-		C = Drawing.new("Text")
-		C.Center = true
-		C.Outline = true
-		C.Size = 13
-		z[A] = C
+	for C, D in x do
+		D:Remove()
 	end
-	return C
+	table.clear(x)
+	y = 0
 end
 
-local function C()
-	for D = A + 1, #z do
-		z[D].Visible = false
-	end
-end
-
-local function D()
-	for E, F in z do
-		F:Remove()
-	end
-	table.clear(z)
-	A = 0
-end
-
-local function E(F)
-	if not F or not F.Parent or not F:IsDescendantOf(workspace) then
+local function C(D)
+	if not D or not D.Parent or not D:IsDescendantOf(workspace) then
 		return false
 	end
-	if F.Parent.Name == "Garbage" or F:IsDescendantOf(i) then
+	if D.Parent.Name == "Garbage" or D:IsDescendantOf(g) then
 		return false
 	end
-	local G, H = pcall(function()
-		return j.get("Breakable", F)
+	local E, F = pcall(function()
+		return h.get("Breakable", D)
 	end)
-	if G and H and H.states and H.states.destroyed and H.states.destroyed:get() then
+	if E and F and F.states and F.states.destroyed and F.states.destroyed:get() then
 		return false
 	end
-	if F:IsA("BasePart") then
-		if F.Transparency < 1 and F.Size.Magnitude > 0.05 then
-			return F
+	if D:IsA("BasePart") then
+		if D.Transparency < 1 and D.Size.Magnitude > 0.05 then
+			return D
 		end
 		return false
 	end
-	for I, J in F:GetChildren() do
-		if J:IsA("BasePart") and J.Transparency < 1 and J.Size.Magnitude > 0.05 then
-			return J
+	for G, H in D:GetChildren() do
+		if H:IsA("BasePart") and H.Transparency < 1 and H.Size.Magnitude > 0.05 then
+			return H
 		end
 	end
-	local I = F:IsA("Model") and (F.PrimaryPart or F:FindFirstChildWhichIsA("BasePart", true))
-	if I and I.Transparency < 1 and I.Size.Magnitude > 0.05 then
-		return I
+	local G = D:IsA("Model") and (D.PrimaryPart or D:FindFirstChildWhichIsA("BasePart", true))
+	if G and G.Transparency < 1 and G.Size.Magnitude > 0.05 then
+		return G
 	end
 	return false
 end
 
-local function F()
-	A = 0
-	if not c("ESPWorld", false) then
-		C()
+local function D()
+	y = 0
+	if not ad("ESPWorld", false) then
+		A()
 		return
 	end
-	local G = d("ESPMaxDistance", 0)
-	if G <= 0 then
-		G = math.huge
+	local E = b("ESPMaxDistance", 0)
+	if E <= 0 then
+		E = math.huge
 	end
-	local H = b.Camera.CFrame.Position
-	for I, J in y do
-		if not c(J.toggle, false) then
+	local F = ac.Camera.CFrame.Position
+	for G, H in w do
+		if not ad(H.toggle, false) then
 			continue
 		end
-		local K = d(J.color, J.default)
-		for L, M in J.tags do
-			for N, O in h:GetTagged(M) do
-				local P = E(O)
-				if not P then
+		local I = b(H.color, H.default)
+		for J, K in H.tags do
+			for L, M in f:GetTagged(K) do
+				local N = C(M)
+				if not N then
 					continue
 				end
-				local Q = (H - P.Position).Magnitude
-				if Q > G then
+				local O = (F - N.Position).Magnitude
+				if O > E then
 					continue
 				end
-				local R, S = b.Camera:WorldToViewportPoint(P.Position)
-				if not S or R.Z <= 0 then
+				local P, Q = ac.Camera:WorldToViewportPoint(N.Position)
+				if not Q or P.Z <= 0 then
 					continue
 				end
-				local T = B()
-				T.Text = `{J.label} [{math.floor(Q)}]`
-				T.Position = Vector2.new(R.X, R.Y)
-				T.Color = K
-				T.Visible = true
+				local R = z()
+				R.Text = `{H.label} [{math.floor(O)}]`
+				R.Position = Vector2.new(P.X, P.Y)
+				R.Color = I
+				R.Visible = true
 			end
 		end
 	end
-	C()
+	A()
 end
 
-	b.visuals = {
-		applyESP = o,
-		step = F,
-		unload = D,
+	ac.visuals = {
+		applyESP = m,
+		step = D,
+		unload = B,
 	}
-	ab.step = F
-	ab.unload = D
+	ab.step = D
+	ab.unload = B
 end
 
 function ab.step()
@@ -1251,7 +1231,7 @@ function ab.unload()
 end
 
 return ab
-end function a.f()local ab=a.cache.f if not ab then ab={c=aa()}a.cache.f=ab end return ab.c end end end
+end function a.d()local ab=a.cache.d if not ab then ab={c=aa()}a.cache.d=ab end return ab.c end end end
 if not LPH_OBFUSCATED then
 	LPH_ATTRIBUTES = function(...) end
 	VM = function(...) return ... end
@@ -1262,98 +1242,86 @@ if not LPH_OBFUSCATED then
 	LPH_CRASH = function() end
 end
 
-local aa = a.a()
-aa.init()
+local aa = game:GetService("Players")
+local ab = game:GetService("RunService")
+local ac = game:GetService("ReplicatedStorage")
+local ad = game:GetService("UserInputService")
+local b = game:GetService("CollectionService")
+local c = workspace.CurrentCamera
+local d = aa.LocalPlayer
 
-local ab = a.b()
-local b, c = ab.checkKey(getgenv().script_key)
+local e = require(ac.Modules.StateObject)
+local f = loadstring(game:HttpGet("https://raw.githubusercontent.com/ttokennxyz/vaultcc/refs/heads/main/targeting.lua"))()
+local g = loadstring(game:HttpGet("https://raw.githubusercontent.com/ttokennxyz/vaultcc/refs/heads/main/esplib_op1.lua"))()
 
-if not b then
-    setclipboard("https://discord.gg/Z7tvDkBUxX")
-    game.Players.LocalPlayer:Kick("Please get a valid key from https://discord.gg/Z7tvDkBUxX, we have attempted to copy it to your clipboard")
-    return
-end
-
-local d = game:GetService("Players")
-local e = game:GetService("RunService")
-local f = game:GetService("ReplicatedStorage")
-local g = game:GetService("UserInputService")
-local h = game:GetService("CollectionService")
-local i = workspace.CurrentCamera
-local j = d.LocalPlayer
-
-local k = require(f.Modules.StateObject)
-local l = loadstring(game:HttpGet("https://raw.githubusercontent.com/ttokennxyz/vaultcc/refs/heads/main/targeting.lua"))()
-local m = loadstring(game:HttpGet("https://raw.githubusercontent.com/ttokennxyz/vaultcc/refs/heads/main/esplib_op1.lua"))()
-
-local n, o, p = loadstring(game:HttpGet("https://raw.githubusercontent.com/ttokennxyz/vaultcc/refs/heads/main/uilib.lua"))()
+local h, i, j = loadstring(game:HttpGet("https://raw.githubusercontent.com/ttokennxyz/vaultcc/refs/heads/main/uilib.lua"))()
 
 
-m:Load({ Enabled = false, Players = false, LocalPlayer = false })
+g:Load({ Enabled = false, Players = false, LocalPlayer = false })
 
-local q = a.c()
-local r = a.d().create({
+local k = a.a()
+local l = a.b().create({
 	title = "Operation One - vault.cc Lite",
 	folder = "VaultCC/op1_lite",
 	tabs = { "Combat", "ESP", "Settings" },
 	ignore = { "menubind" },
-	afterLoad = function(r)
-		if r.visuals and r.visuals.applyESP then
-			r.visuals.applyESP()
+	afterLoad = function(l)
+		if l.visuals and l.visuals.applyESP then
+			l.visuals.applyESP()
 		end
 	end,
 })
-local s = a.e()
-local t = a.f()
+local m = a.c()
+local n = a.d()
 
-local u = {
-	Players = d,
-	RunService = e,
-	UserInputService = g,
-	CollectionService = h,
-	ReplicatedStorage = f,
-	LocalPlayer = j,
+local o = {
+	Players = aa,
+	RunService = ab,
+	UserInputService = ad,
+	CollectionService = b,
+	ReplicatedStorage = ac,
+	LocalPlayer = d,
 	Camera = workspace.CurrentCamera,
-	StateObject = k,
-	Targeting = l,
-	ESP = m,
-	Library = n,
-	ThemeManager = o,
-	SaveManager = p,
-	espConfig = m:GetConfig(),
-	tv = q.tv,
-	ov = q.ov,
+	StateObject = e,
+	Targeting = f,
+	ESP = g,
+	Library = h,
+	ThemeManager = i,
+	SaveManager = j,
+	espConfig = g:GetConfig(),
+	tv = k.tv,
+	ov = k.ov,
 }
 
-r.build(u)
-s.build(u)
-t.build(u)
-r.finish(u)
+l.build(o)
+m.build(o)
+n.build(o)
+l.finish(o)
 
-local v = false
-local function w()
-	if v then
+local p = false
+local function q()
+	if p then
 		return
 	end
-	v = true
-	if u.renderConnection then
-		u.renderConnection:Disconnect()
-		u.renderConnection = nil
+	p = true
+	if o.renderConnection then
+		o.renderConnection:Disconnect()
+		o.renderConnection = nil
 	end
-	if u.visuals and u.visuals.unload then
-		u.visuals.unload()
+	if o.visuals and o.visuals.unload then
+		o.visuals.unload()
 	end
-	if m and m.Unload then
-		m:Unload()
+	if g and g.Unload then
+		g:Unload()
 	end
 end
 
-u.renderConnection = e.RenderStepped:Connect(function()
+o.renderConnection = ab.RenderStepped:Connect(function()
 	LPH_ATTRIBUTES(VM(NONE))
-	u.Camera = workspace.CurrentCamera
-	u.combat.getTarget()
-	u.combat.step()
-	u.visuals.step()
+	o.Camera = workspace.CurrentCamera
+	o.combat.getTarget()
+	o.combat.step()
+	o.visuals.step()
 end)
 
-n:OnUnload(w)
+h:OnUnload(q)
